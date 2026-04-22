@@ -8,6 +8,26 @@ type IncomingLink = {
   url: string
 }
 
+export async function GET() {
+  try {
+    const businesses = db
+      .prepare(`
+        SELECT *
+        FROM businesses
+        ORDER BY created_at DESC
+      `)
+      .all()
+
+    return NextResponse.json(businesses, { status: 200 })
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json(
+      { error: 'Failed to fetch businesses' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
