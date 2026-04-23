@@ -51,7 +51,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
     const { id } = await params
     const body = await req.json()
 
-    const { name, tagline, slug, theme, links } = body
+    const { name, tagline, slug, template, logoUrl, links } = body
 
     if (!name || !slug) {
       return NextResponse.json(
@@ -84,13 +84,14 @@ export async function PUT(req: Request, { params }: RouteContext) {
 
     db.prepare(`
       UPDATE businesses
-      SET name = ?, tagline = ?, slug = ?, theme = ?
+      SET name = ?, tagline = ?, slug = ?, template = ?, logo_url = ?
       WHERE id = ?
     `).run(
       name,
       tagline ?? null,
       slug,
-      theme ?? 'dark-glass',
+      template ?? 'classic-dark',
+      logoUrl ?? null,
       id
     )
 
@@ -104,7 +105,6 @@ export async function PUT(req: Request, { params }: RouteContext) {
 
       for (let index = 0; index < links.length; index++) {
         const link = links[index] as IncomingLink
-
         if (!link.url) continue
 
         insertLink.run(

@@ -33,4 +33,20 @@ db.exec(`
   );
 `)
 
+
+const businessColumns = db.prepare(`PRAGMA table_info(businesses)`).all() as Array<{
+  name: string
+}>
+
+const hasTemplate = businessColumns.some((col) => col.name === 'template')
+const hasLogoUrl = businessColumns.some((col) => col.name === 'logo_url')
+
+if (!hasTemplate) {
+  db.exec(`ALTER TABLE businesses ADD COLUMN template TEXT DEFAULT 'classic-dark'`)
+}
+
+if (!hasLogoUrl) {
+  db.exec(`ALTER TABLE businesses ADD COLUMN logo_url TEXT`)
+}
+
 export default db

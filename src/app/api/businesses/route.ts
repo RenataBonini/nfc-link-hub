@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     const session = await verifySessionToken(token)
 
     const body = await req.json()
-    const { name, tagline, slug, theme, links } = body
+    const { name, tagline, slug, template, logoUrl, links } = body
 
     if (!name || !slug) {
       return NextResponse.json(
@@ -81,15 +81,16 @@ export async function POST(req: Request) {
     const businessId = crypto.randomUUID()
 
     db.prepare(`
-      INSERT INTO businesses (id, owner_id, name, tagline, slug, theme)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO businesses (id, owner_id, name, tagline, slug, template, logo_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       businessId,
       session.userId,
       name,
       tagline ?? null,
       slug,
-      theme ?? 'dark-glass'
+      template ?? 'classic-dark',
+      logoUrl ?? null
     )
 
     if (Array.isArray(links)) {
