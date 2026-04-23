@@ -14,6 +14,7 @@ type Business = {
   slug: string
   template: 'classic-dark' | 'minimal-light' | 'warm-card'
   logo_url: string | null
+  is_published: number
 }
 
 type BusinessLink = {
@@ -39,20 +40,30 @@ export default async function PublicLandingPage({ params }: Props) {
     )
   }
 
+  if (!business.is_published) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6">
+        <p className="text-lg text-[var(--text)]">This page is not published yet.</p>
+      </main>
+    )
+  }
+
+  const safeBusiness = business
+
   const links = db
     .prepare('SELECT * FROM business_links WHERE business_id = ? ORDER BY sort_order ASC')
-    .all(business.id) as BusinessLink[]
+    .all(safeBusiness.id) as BusinessLink[]
 
-  const hasLogo = Boolean(business.logo_url)
+  const hasLogo = Boolean(safeBusiness.logo_url)
 
   function renderCard() {
-     if (business.template === 'minimal-light') {
+    if (safeBusiness.template === 'minimal-light') {
       return (
         <div className="rounded-[24px] border border-[var(--border)] bg-[#faf6f1] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
             <Image
-              src={business.logo_url!}
-              alt={`${business.name} logo`}
+              src={safeBusiness.logo_url!}
+              alt={`${safeBusiness.name} logo`}
               width={84}
               height={84}
               className="mx-auto mb-4 h-[84px] w-[84px] rounded-full object-cover border border-[var(--border)]"
@@ -61,9 +72,9 @@ export default async function PublicLandingPage({ params }: Props) {
             <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-[var(--border)]" />
           )}
 
-          <h1 className="text-2xl font-bold">{business.name}</h1>
+          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
           <p className="mt-2 text-sm text-[var(--mocha)]/70">
-            {business.tagline || 'Connect with us instantly'}
+            {safeBusiness.tagline || 'Connect with us instantly'}
           </p>
 
           <div className="mt-8 space-y-3">
@@ -83,13 +94,13 @@ export default async function PublicLandingPage({ params }: Props) {
       )
     }
 
-    if (business.template === 'warm-card') {
+    if (safeBusiness.template === 'warm-card') {
       return (
         <div className="rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
             <Image
-              src={business.logo_url!}
-              alt={`${business.name} logo`}
+              src={safeBusiness.logo_url!}
+              alt={`${safeBusiness.name} logo`}
               width={88}
               height={88}
               className="mx-auto mb-4 h-[88px] w-[88px] rounded-2xl object-cover border border-white/60 shadow"
@@ -98,9 +109,9 @@ export default async function PublicLandingPage({ params }: Props) {
             <div className="mx-auto mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
 
-          <h1 className="text-2xl font-bold">{business.name}</h1>
+          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
           <p className="mt-2 text-sm text-[var(--mocha)]/80">
-            {business.tagline || 'Connect with us instantly'}
+            {safeBusiness.tagline || 'Connect with us instantly'}
           </p>
 
           <div className="mt-8 space-y-3">
@@ -124,8 +135,8 @@ export default async function PublicLandingPage({ params }: Props) {
       <div className="rounded-[24px] bg-[linear-gradient(180deg,#3d2b1f_0%,#1f1813_100%)] px-6 py-8 text-center text-white shadow-2xl">
         {hasLogo ? (
           <Image
-            src={business.logo_url!}
-            alt={`${business.name} logo`}
+            src={safeBusiness.logo_url!}
+            alt={`${safeBusiness.name} logo`}
             width={84}
             height={84}
             className="mx-auto mb-4 h-[84px] w-[84px] rounded-full object-cover border border-white/20"
@@ -134,9 +145,9 @@ export default async function PublicLandingPage({ params }: Props) {
           <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/10" />
         )}
 
-        <h1 className="text-2xl font-bold">{business.name}</h1>
+        <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
         <p className="mt-2 text-sm text-white/70">
-          {business.tagline || 'Connect with us instantly'}
+          {safeBusiness.tagline || 'Connect with us instantly'}
         </p>
 
         <div className="mt-8 space-y-3">

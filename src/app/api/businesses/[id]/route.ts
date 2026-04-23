@@ -33,10 +33,7 @@ export async function GET(_: Request, { params }: RouteContext) {
       .prepare('SELECT * FROM business_links WHERE business_id = ? ORDER BY sort_order ASC')
       .all(id)
 
-    return NextResponse.json(
-      { business, links },
-      { status: 200 }
-    )
+    return NextResponse.json({ business, links }, { status: 200 })
   } catch (error) {
     console.error(error)
     return NextResponse.json(
@@ -51,7 +48,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
     const { id } = await params
     const body = await req.json()
 
-    const { name, tagline, slug, template, logoUrl, links } = body
+    const { name, tagline, slug, template, logoUrl, links, isPublished } = body
 
     if (!name || !slug) {
       return NextResponse.json(
@@ -84,7 +81,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
 
     db.prepare(`
       UPDATE businesses
-      SET name = ?, tagline = ?, slug = ?, template = ?, logo_url = ?
+      SET name = ?, tagline = ?, slug = ?, template = ?, logo_url = ?, is_published = ?
       WHERE id = ?
     `).run(
       name,
@@ -92,6 +89,7 @@ export async function PUT(req: Request, { params }: RouteContext) {
       slug,
       template ?? 'classic-dark',
       logoUrl ?? null,
+      isPublished ? 1 : 0,
       id
     )
 

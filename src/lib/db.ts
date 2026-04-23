@@ -33,13 +33,13 @@ db.exec(`
   );
 `)
 
-
 const businessColumns = db.prepare(`PRAGMA table_info(businesses)`).all() as Array<{
   name: string
 }>
 
 const hasTemplate = businessColumns.some((col) => col.name === 'template')
 const hasLogoUrl = businessColumns.some((col) => col.name === 'logo_url')
+const hasPublished = businessColumns.some((col) => col.name === 'is_published')
 
 if (!hasTemplate) {
   db.exec(`ALTER TABLE businesses ADD COLUMN template TEXT DEFAULT 'classic-dark'`)
@@ -47,6 +47,10 @@ if (!hasTemplate) {
 
 if (!hasLogoUrl) {
   db.exec(`ALTER TABLE businesses ADD COLUMN logo_url TEXT`)
+}
+
+if (!hasPublished) {
+  db.exec(`ALTER TABLE businesses ADD COLUMN is_published INTEGER DEFAULT 0`)
 }
 
 export default db

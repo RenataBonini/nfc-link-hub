@@ -16,10 +16,7 @@ export async function GET() {
     const token = cookieStore.get('session')?.value
 
     if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const session = await verifySessionToken(token)
@@ -49,16 +46,13 @@ export async function POST(req: Request) {
     const token = cookieStore.get('session')?.value
 
     if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const session = await verifySessionToken(token)
 
     const body = await req.json()
-    const { name, tagline, slug, template, logoUrl, links } = body
+    const { name, tagline, slug, template, logoUrl, links, isPublished } = body
 
     if (!name || !slug) {
       return NextResponse.json(
@@ -81,8 +75,8 @@ export async function POST(req: Request) {
     const businessId = crypto.randomUUID()
 
     db.prepare(`
-      INSERT INTO businesses (id, owner_id, name, tagline, slug, template, logo_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO businesses (id, owner_id, name, tagline, slug, template, logo_url, is_published)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       businessId,
       session.userId,
@@ -90,7 +84,8 @@ export async function POST(req: Request) {
       tagline ?? null,
       slug,
       template ?? 'classic-dark',
-      logoUrl ?? null
+      logoUrl ?? null,
+      isPublished ? 1 : 0
     )
 
     if (Array.isArray(links)) {

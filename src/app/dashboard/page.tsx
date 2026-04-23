@@ -17,6 +17,7 @@ type FormData = {
   tagline: string
   template: TemplateType
   logoUrl: string
+  isPublished: boolean
   whatsapp: string
   instagram: string
   googleReviews: string
@@ -32,6 +33,7 @@ type Business = {
   slug: string
   template: TemplateType
   logo_url: string | null
+  is_published: number
   created_at: string
 }
 
@@ -49,6 +51,7 @@ const initialForm: FormData = {
   tagline: '',
   template: 'classic-dark',
   logoUrl: '',
+  isPublished: false,
   whatsapp: '',
   instagram: '',
   googleReviews: '',
@@ -60,8 +63,8 @@ function slugify(value: string) {
   return value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\\s-]/g, '')
-    .replace(/\\s+/g, '-')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
 }
 
@@ -198,6 +201,7 @@ export default function DashboardPage() {
           slug,
           template: form.template,
           logoUrl: form.logoUrl || null,
+          isPublished: form.isPublished,
           links,
         }),
       })
@@ -274,6 +278,7 @@ export default function DashboardPage() {
         tagline: business.tagline || '',
         template: business.template || 'classic-dark',
         logoUrl: business.logo_url || '',
+        isPublished: Boolean(business.is_published),
         whatsapp: '',
         instagram: '',
         googleReviews: '',
@@ -307,6 +312,35 @@ export default function DashboardPage() {
     window.location.href = '/'
   }
 
+  async function copyPublicLink(slugValue: string) {
+  const fullUrl = `${window.location.origin}/preview/${slugValue}`
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(fullUrl)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = fullUrl
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+
+    setMessage(`Copied link: ${fullUrl}`)
+    setError('')
+  } catch (err) {
+    console.error(err)
+    setError('Failed to copy link')
+  }
+}
+
+  
+  
+
   function renderPreviewCard() {
     const hasLogo = Boolean(form.logoUrl)
 
@@ -331,11 +365,14 @@ export default function DashboardPage() {
           </p>
 
           <div className="mt-8 w-full space-y-3">
-            {(links.length ? links : [
-              { type: 'whatsapp', label: 'WhatsApp', url: '#' },
-              { type: 'instagram', label: 'Instagram', url: '#' },
-              { type: 'google', label: 'Google Reviews', url: '#' },
-            ]).map((link) => (
+            {(links.length
+              ? links
+              : [
+                  { type: 'whatsapp', label: 'WhatsApp', url: '#' },
+                  { type: 'instagram', label: 'Instagram', url: '#' },
+                  { type: 'google', label: 'Google Reviews', url: '#' },
+                ]
+            ).map((link) => (
               <div
                 key={link.type}
                 className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm"
@@ -369,11 +406,14 @@ export default function DashboardPage() {
           </p>
 
           <div className="mt-8 w-full space-y-3">
-            {(links.length ? links : [
-              { type: 'whatsapp', label: 'WhatsApp', url: '#' },
-              { type: 'instagram', label: 'Instagram', url: '#' },
-              { type: 'google', label: 'Google Reviews', url: '#' },
-            ]).map((link) => (
+            {(links.length
+              ? links
+              : [
+                  { type: 'whatsapp', label: 'WhatsApp', url: '#' },
+                  { type: 'instagram', label: 'Instagram', url: '#' },
+                  { type: 'google', label: 'Google Reviews', url: '#' },
+                ]
+            ).map((link) => (
               <div
                 key={link.type}
                 className="rounded-2xl bg-white/80 px-4 py-3 text-sm font-medium shadow-sm"
@@ -406,11 +446,14 @@ export default function DashboardPage() {
         </p>
 
         <div className="mt-8 w-full space-y-3">
-          {(links.length ? links : [
-            { type: 'whatsapp', label: 'WhatsApp', url: '#' },
-            { type: 'instagram', label: 'Instagram', url: '#' },
-            { type: 'google', label: 'Google Reviews', url: '#' },
-          ]).map((link) => (
+          {(links.length
+            ? links
+            : [
+                { type: 'whatsapp', label: 'WhatsApp', url: '#' },
+                { type: 'instagram', label: 'Instagram', url: '#' },
+                { type: 'google', label: 'Google Reviews', url: '#' },
+              ]
+          ).map((link) => (
             <div
               key={link.type}
               className="rounded-full bg-white/10 px-4 py-3 text-sm"
@@ -574,6 +617,19 @@ export default function DashboardPage() {
                       readOnly
                       className="w-full rounded-xl border border-[var(--border)] bg-[#f5efe8] px-4 py-3 text-sm text-[var(--mocha)]"
                     />
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3">
+                    <input
+                      id="publish-toggle"
+                      type="checkbox"
+                      checked={form.isPublished}
+                      onChange={(e) => updateField('isPublished', e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor="publish-toggle" className="text-sm font-medium text-[var(--text)]">
+                      Publish this page
+                    </label>
                   </div>
 
                   <div>
@@ -740,12 +796,25 @@ export default function DashboardPage() {
                             )}
 
                             <div>
-                              <h3 className="text-lg font-semibold text-[var(--text)]">
-                                {business.name}
-                              </h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-semibold text-[var(--text)]">
+                                  {business.name}
+                                </h3>
+                                <span
+                                  className={`rounded-full px-2 py-1 text-xs font-medium ${
+                                    business.is_published
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {business.is_published ? 'Published' : 'Draft'}
+                                </span>
+                              </div>
+
                               <p className="mt-1 text-sm text-[var(--mocha)]/70">
                                 {business.tagline || 'No tagline'}
                               </p>
+
                               <p className="mt-2 text-xs text-[var(--mocha)]/60">
                                 /preview/{business.slug}
                               </p>
@@ -760,6 +829,16 @@ export default function DashboardPage() {
                             >
                               Preview
                             </Link>
+
+                            <button
+                             type="button"
+                             onClick={() => copyPublicLink(business.slug)}
+                               className="cursor-pointer rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[#f8f4ef]"
+                                >
+                                 Copy Link
+                              </button>
+
+                            
 
                             <button
                               type="button"
