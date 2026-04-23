@@ -140,6 +140,7 @@ export default function DashboardPage() {
       setSavedBusinesses(data)
     } catch (err) {
       console.error(err)
+      setError(err instanceof Error ? err.message : 'Failed to load pages')
     } finally {
       setLoadingPages(false)
     }
@@ -177,7 +178,6 @@ export default function DashboardPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ownerId: 'demo-user-1',
           name: form.businessName.trim(),
           tagline: form.tagline.trim(),
           slug,
@@ -282,16 +282,34 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleLogout() {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+    })
+
+    window.location.href = '/'
+  }
+
   const isDark = form.theme === 'dark-glass'
 
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#b8926b_0%,#8f6d4e_100%)] px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 text-center text-white">
-          <h1 className="text-3xl font-bold sm:text-4xl">NFC Link Hub Builder</h1>
-          <p className="mt-2 text-sm text-white/80 sm:text-base">
-            Create simple landing pages for your NFC tags
-          </p>
+        <div className="mb-8 flex flex-col gap-4 text-white sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-center sm:text-left">
+            <h1 className="text-3xl font-bold sm:text-4xl">NFC Link Hub Builder</h1>
+            <p className="mt-2 text-sm text-white/80 sm:text-base">
+              Create simple landing pages for your NFC tags
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[var(--text)]"
+          >
+            Logout
+          </button>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.7fr_0.9fr]">

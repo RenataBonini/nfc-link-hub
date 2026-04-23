@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import db from '@/lib/db'
+import { cookies } from 'next/headers'
+import { verifySessionToken } from '@/lib/auth'
 
 type IncomingLink = {
   type: string
@@ -10,13 +12,26 @@ type IncomingLink = {
 
 export async function GET() {
   try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('session')?.value
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const session = await verifySessionToken(token)
+
     const businesses = db
       .prepare(`
         SELECT *
         FROM businesses
+        WHERE owner_id = ?
         ORDER BY created_at DESC
       `)
-      .all()
+      .all(session.userId)
 
     return NextResponse.json(businesses, { status: 200 })
   } catch (error) {
@@ -30,10 +45,22 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { ownerId, name, tagline, slug, theme, links } = body
+    const cookieStore = await cookies()
+    const token = cookieStore.get('session')?.value
 
-    if (!ownerId || !name || !slug) {
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const session = await verifySessionToken(token)
+
+    const body = await req.json()
+    const { name, tagline, slug, theme, links } = body
+
+    if (!name || !slug) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -58,7 +85,7 @@ export async function POST(req: Request) {
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
       businessId,
-      ownerId,
+      session.userId,
       name,
       tagline ?? null,
       slug,

@@ -4,25 +4,27 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-export default function HomePage() {
+export default function RegisterPage() {
   const router = useRouter()
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          name,
           email,
           password,
         }),
@@ -31,7 +33,7 @@ export default function HomePage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
+        throw new Error(data.error || 'Registration failed')
       }
 
       router.push('/dashboard')
@@ -48,14 +50,28 @@ export default function HomePage() {
       <div className="w-full max-w-sm rounded-[28px] border border-[var(--border)] bg-[var(--cream)] p-6 shadow-2xl sm:max-w-md sm:p-8 md:max-w-lg md:p-10">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-semibold text-[var(--text)] sm:text-4xl">
-            NFC Link Hub
+            Create Account
           </h1>
           <p className="mt-2 text-sm text-[var(--mocha)]/70 sm:text-base">
-            Create NFC landing pages for your business
+            Register to manage your NFC landing pages
           </p>
         </div>
 
-        <form className="space-y-4 sm:space-y-5" onSubmit={handleLogin}>
+        <form className="space-y-4 sm:space-y-5" onSubmit={handleRegister}>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--mocha)]">
+              Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your full name"
+              className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm sm:text-base"
+              required
+            />
+          </div>
+
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--mocha)]">
               Email
@@ -78,7 +94,7 @@ export default function HomePage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Create a password"
               className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm sm:text-base"
               required
             />
@@ -93,14 +109,13 @@ export default function HomePage() {
             disabled={loading}
             className="w-full rounded-xl bg-[var(--text)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60 sm:text-base"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
 
-        <div className="mt-6 flex items-center justify-between text-sm text-[var(--mocha)]/70">
-          <span>New user?</span>
-          <Link href="/register" className="font-semibold text-[var(--brand-dark)]">
-            Create account
+        <div className="mt-6 text-center text-sm text-[var(--mocha)]/70">
+          <Link href="/" className="font-semibold text-[var(--brand-dark)]">
+            Back to login
           </Link>
         </div>
       </div>

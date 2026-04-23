@@ -26,9 +26,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS business_links (
     id TEXT PRIMARY KEY,
     business_id TEXT NOT NULL,
-    type TEXT,
-    label TEXT,
-    url TEXT,
+    type TEXT NOT NULL,
+    label TEXT NOT NULL,
+    url TEXT NOT NULL,
     sort_order INTEGER DEFAULT 0
   );
 `)
