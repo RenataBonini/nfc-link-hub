@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { QRCodeCanvas } from 'qrcode.react'
 import { useMemo, useState } from 'react'
 
 type LinkItem = {
@@ -80,6 +81,7 @@ export default function DashboardPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loadingEdit, setLoadingEdit] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [openQrId, setOpenQrId] = useState<string | null>(null)
 
   const slug = useMemo(
     () => slugify(form.businessName || 'business-name'),
@@ -173,6 +175,7 @@ export default function DashboardPage() {
       }
 
       updateField('logoUrl', data.url)
+      setMessage('Logo uploaded successfully.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -250,6 +253,8 @@ export default function DashboardPage() {
       if (editingId === id) {
         resetForm()
       }
+
+      setMessage('Page deleted successfully.')
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Delete failed')
     } finally {
@@ -297,6 +302,7 @@ export default function DashboardPage() {
       setForm(nextForm)
       setEditingId(business.id)
       setActiveTab('create')
+      setMessage('Page loaded for editing.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load page')
     } finally {
@@ -313,33 +319,38 @@ export default function DashboardPage() {
   }
 
   async function copyPublicLink(slugValue: string) {
-  const fullUrl = `${window.location.origin}/preview/${slugValue}`
+    const fullUrl = `${window.location.origin}/preview/${slugValue}`
 
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(fullUrl)
-    } else {
-      const textArea = document.createElement('textarea')
-      textArea.value = fullUrl
-      textArea.style.position = 'fixed'
-      textArea.style.left = '-9999px'
-      document.body.appendChild(textArea)
-      textArea.focus()
-      textArea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textArea)
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(fullUrl)
+      } else {
+        const textArea = document.createElement('textarea')
+        textArea.value = fullUrl
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-9999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+
+      setMessage('Link copied successfully.')
+      setError('')
+
+      setTimeout(() => {
+        setMessage('')
+      }, 2500)
+    } catch (err) {
+      console.error(err)
+      setError('Failed to copy link')
     }
-
-    setMessage(`Copied link: ${fullUrl}`)
-    setError('')
-  } catch (err) {
-    console.error(err)
-    setError('Failed to copy link')
   }
-}
 
-  
-  
+  function toggleQr(id: string) {
+    setOpenQrId((prev) => (prev === id ? null : id))
+  }
 
   function renderPreviewCard() {
     const hasLogo = Boolean(form.logoUrl)
@@ -768,6 +779,9 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
+                {message ? <p className="mb-4 text-sm font-medium text-green-700">{message}</p> : null}
+                {error ? <p className="mb-4 text-sm font-medium text-red-700">{error}</p> : null}
+
                 {loadingPages ? (
                   <p className="text-sm text-[var(--mocha)]/70">Loading pages...</p>
                 ) : savedBusinesses.length === 0 ? (
@@ -776,91 +790,115 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {savedBusinesses.map((business) => (
-                      <div
-                        key={business.id}
-                        className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm"
-                      >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex items-center gap-3">
-                            {business.logo_url ? (
-                              <Image
-                                src={business.logo_url}
-                                alt={`${business.name} logo`}
-                                width={48}
-                                height={48}
-                                className="h-12 w-12 rounded-full object-cover border border-[var(--border)]"
-                              />
-                            ) : (
-                              <div className="h-12 w-12 rounded-full bg-[var(--border)]" />
-                            )}
+                    {savedBusinesses.map((business) => {
+                      const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/preview/${business.slug}`
 
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-semibold text-[var(--text)]">
-                                  {business.name}
-                                </h3>
-                                <span
-                                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                    business.is_published
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-gray-100 text-gray-600'
-                                  }`}
-                                >
-                                  {business.is_published ? 'Published' : 'Draft'}
-                                </span>
+                      return (
+                        <div
+                          key={business.id}
+                          className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm"
+                        >
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-3">
+                              {business.logo_url ? (
+                                <Image
+                                  src={business.logo_url}
+                                  alt={`${business.name} logo`}
+                                  width={48}
+                                  height={48}
+                                  className="h-12 w-12 rounded-full object-cover border border-[var(--border)]"
+                                />
+                              ) : (
+                                <div className="h-12 w-12 rounded-full bg-[var(--border)]" />
+                              )}
+
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="text-lg font-semibold text-[var(--text)]">
+                                    {business.name}
+                                  </h3>
+                                  <span
+                                    className={`rounded-full px-2 py-1 text-xs font-medium ${
+                                      business.is_published
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-gray-100 text-gray-600'
+                                    }`}
+                                  >
+                                    {business.is_published ? 'Published' : 'Draft'}
+                                  </span>
+                                </div>
+
+                                <p className="mt-1 text-sm text-[var(--mocha)]/70">
+                                  {business.tagline || 'No tagline'}
+                                </p>
+
+                                <p className="mt-2 text-xs text-[var(--mocha)]/60">
+                                  /preview/{business.slug}
+                                </p>
                               </div>
+                            </div>
 
-                              <p className="mt-1 text-sm text-[var(--mocha)]/70">
-                                {business.tagline || 'No tagline'}
-                              </p>
+                            <div className="flex flex-wrap gap-2">
+                              <Link
+                                href={`/preview/${business.slug}`}
+                                target="_blank"
+                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                              >
+                                Preview
+                              </Link>
 
-                              <p className="mt-2 text-xs text-[var(--mocha)]/60">
-                                /preview/{business.slug}
-                              </p>
+                              <button
+                                type="button"
+                                onClick={() => copyPublicLink(business.slug)}
+                                className="cursor-pointer rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[#f8f4ef]"
+                              >
+                                Copy Link
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => toggleQr(business.id)}
+                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                              >
+                                {openQrId === business.id ? 'Hide QR' : 'Show QR'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(business.id)}
+                                disabled={loadingEdit}
+                                className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+                              >
+                                {loadingEdit ? 'Loading...' : 'Edit'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(business.id)}
+                                disabled={deletingId === business.id}
+                                className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+                              >
+                                {deletingId === business.id ? 'Deleting...' : 'Delete'}
+                              </button>
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap gap-2">
-                            <Link
-                              href={`/preview/${business.slug}`}
-                              target="_blank"
-                              className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
-                            >
-                              Preview
-                            </Link>
-
-                            <button
-                             type="button"
-                             onClick={() => copyPublicLink(business.slug)}
-                               className="cursor-pointer rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[#f8f4ef]"
-                                >
-                                 Copy Link
-                              </button>
-
-                            
-
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(business.id)}
-                              disabled={loadingEdit}
-                              className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-                            >
-                              {loadingEdit ? 'Loading...' : 'Edit'}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(business.id)}
-                              disabled={deletingId === business.id}
-                              className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-                            >
-                              {deletingId === business.id ? 'Deleting...' : 'Delete'}
-                            </button>
-                          </div>
+                          {openQrId === business.id ? (
+                            <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[#faf6f1] p-4">
+                              <div className="flex flex-col items-center gap-3 text-center">
+                                <QRCodeCanvas value={publicUrl} size={180} />
+                                <p className="text-sm text-[var(--mocha)]/70">
+                                  Scan this QR code to open the page
+                                </p>
+                                <p className="break-all text-xs text-[var(--mocha)]/60">
+                                  {publicUrl}
+                                </p>
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
