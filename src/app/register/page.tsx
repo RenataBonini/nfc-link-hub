@@ -2,15 +2,19 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { auth, db } from '@/lib/firebase'
 import { useState } from 'react'
 
 export default function RegisterPage() {
   const router = useRouter()
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -18,28 +22,31 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      )
+
+      await updateProfile(credential.user, {
+        displayName: name.trim(),
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
-      }
+      await setDoc(doc(db, 'users', credential.user.uid), {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        createdAt: new Date().toISOString(),
+      })
 
       router.push('/dashboard')
-      router.refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch (err: unknown) {
+      console.error(err)
+
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('Could not create account.')
+      }
     } finally {
       setLoading(false)
     }
@@ -97,11 +104,14 @@ export default function RegisterPage() {
               placeholder="Create a password"
               className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm sm:text-base"
               required
+              minLength={6}
             />
           </div>
 
           {error ? (
-            <p className="text-sm font-medium text-red-700">{error}</p>
+            <p className="break-words text-sm font-medium text-red-700">
+              {error}
+            </p>
           ) : null}
 
           <button

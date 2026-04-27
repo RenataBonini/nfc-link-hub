@@ -2,16 +2,32 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { QRCodeCanvas } from 'qrcode.react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { onAuthStateChanged, signOut, User } from 'firebase/auth'
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore'
+import { auth, db } from '@/lib/firebase'
+
+type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
 
 type LinkItem = {
   type: string
   label: string
   url: string
 }
-
-type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
 
 type FormData = {
   businessName: string
@@ -28,23 +44,13 @@ type FormData = {
 
 type Business = {
   id: string
-  owner_id: string
+  ownerId: string
   name: string
-  tagline: string | null
+  tagline: string
   slug: string
   template: TemplateType
-  logo_url: string | null
-  is_published: number
-  created_at: string
-}
-
-type BusinessLink = {
-  id: string
-  business_id: string
-  type: string
-  label: string
-  url: string
-  sort_order: number
+  logoUrl: string
+  isPublished: boolean
 }
 
 const initialForm: FormData = {
@@ -70,27 +76,29 @@ function slugify(value: string) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
+
+  const [user, setUser] = useState<User | null>(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
   const [activeTab, setActiveTab] = useState<'create' | 'pages'>('create')
   const [form, setForm] = useState<FormData>(initialForm)
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
   const [savedBusinesses, setSavedBusinesses] = useState<Business[]>([])
+
+  const [loading, setLoading] = useState(false)
   const [loadingPages, setLoadingPages] = useState(false)
+  const [loadingEdit, setLoadingEdit] = useState(false)
   const [deletingId, setDeletingId] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [loadingEdit, setLoadingEdit] = useState(false)
-  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [openQrId, setOpenQrId] = useState<string | null>(null)
+
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
   const slug = useMemo(
     () => slugify(form.businessName || 'business-name'),
     [form.businessName]
   )
-
-  function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }))
-  }
 
   const links: LinkItem[] = useMemo(() => {
     const items: LinkItem[] = []
@@ -98,9 +106,11 @@ export default function DashboardPage() {
     if (form.whatsapp.trim()) {
       items.push({ type: 'whatsapp', label: 'WhatsApp', url: form.whatsapp.trim() })
     }
+
     if (form.instagram.trim()) {
       items.push({ type: 'instagram', label: 'Instagram', url: form.instagram.trim() })
     }
+
     if (form.googleReviews.trim()) {
       items.push({
         type: 'google-reviews',
@@ -108,9 +118,11 @@ export default function DashboardPage() {
         url: form.googleReviews.trim(),
       })
     }
+
     if (form.facebook.trim()) {
       items.push({ type: 'facebook', label: 'Facebook', url: form.facebook.trim() })
     }
+
     if (form.website.trim()) {
       items.push({ type: 'website', label: 'Website', url: form.website.trim() })
     }
@@ -118,21 +130,65 @@ export default function DashboardPage() {
     return items
   }, [form])
 
-  async function fetchBusinesses() {
-    setLoadingPages(true)
-
-    try {
-      const response = await fetch('/api/businesses')
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load businesses')
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        router.push('/')
+        return
       }
 
-      setSavedBusinesses(data)
+      setUser(currentUser)
+      setAuthLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [router])
+
+  function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function resetForm() {
+    setForm(initialForm)
+    setEditingId(null)
+    setMessage('')
+    setError('')
+  }
+
+  async function fetchBusinesses() {
+    if (!user) return
+
+    setLoadingPages(true)
+    setError('')
+
+    try {
+      const businessesQuery = query(
+        collection(db, 'businesses'),
+        where('ownerId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      )
+
+      const snapshot = await getDocs(businessesQuery)
+
+      const businesses = snapshot.docs.map((document) => {
+        const data = document.data()
+
+        return {
+          id: document.id,
+          ownerId: data.ownerId,
+          name: data.name,
+          tagline: data.tagline || '',
+          slug: data.slug,
+          template: data.template || 'classic-dark',
+          logoUrl: data.logoUrl || '',
+          isPublished: Boolean(data.isPublished),
+        } as Business
+      })
+
+      setSavedBusinesses(businesses)
     } catch (err) {
       console.error(err)
-      setError(err instanceof Error ? err.message : 'Failed to load pages')
+      setError('Failed to load saved pages.')
     } finally {
       setLoadingPages(false)
     }
@@ -147,143 +203,84 @@ export default function DashboardPage() {
     setActiveTab('create')
   }
 
-  function resetForm() {
-    setForm(initialForm)
-    setEditingId(null)
-    setMessage('')
-    setError('')
-  }
-
-  async function handleLogoUpload(file: File) {
-    setUploadingLogo(true)
-    setError('')
-    setMessage('')
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Upload failed')
-      }
-
-      updateField('logoUrl', data.url)
-      setMessage('Logo uploaded successfully.')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
-    } finally {
-      setUploadingLogo(false)
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+
+    if (!user) {
+      setError('You must be logged in.')
+      return
+    }
+
     setLoading(true)
-    setError('')
     setMessage('')
+    setError('')
 
     try {
-      const url = editingId ? `/api/businesses/${editingId}` : '/api/businesses'
-      const method = editingId ? 'PUT' : 'POST'
+      const slugQuery = query(collection(db, 'businesses'), where('slug', '==', slug))
+      const slugSnapshot = await getDocs(slugQuery)
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: form.businessName.trim(),
-          tagline: form.tagline.trim(),
-          slug,
-          template: form.template,
-          logoUrl: form.logoUrl || null,
-          isPublished: form.isPublished,
-          links,
-        }),
-      })
+      const slugAlreadyExists = slugSnapshot.docs.some(
+        (document) => document.id !== editingId
+      )
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to save page')
+      if (slugAlreadyExists) {
+        throw new Error('A page with this business name already exists.')
       }
 
-      setMessage(
-        editingId
-          ? `Page updated successfully: /preview/${data.slug}`
-          : `Page created successfully: /preview/${data.slug}`
-      )
+      const payload = {
+        ownerId: user.uid,
+        name: form.businessName.trim(),
+        tagline: form.tagline.trim(),
+        slug,
+        template: form.template,
+        logoUrl: form.logoUrl.trim(),
+        isPublished: form.isPublished,
+        links,
+        updatedAt: serverTimestamp(),
+      }
+
+      if (editingId) {
+        await updateDoc(doc(db, 'businesses', editingId), payload)
+        setMessage(`Page updated successfully: /preview/${slug}`)
+      } else {
+        await addDoc(collection(db, 'businesses'), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        })
+        setMessage(`Page created successfully: /preview/${slug}`)
+      }
 
       setForm(initialForm)
       setEditingId(null)
       await fetchBusinesses()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : 'Failed to save page.')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm('Are you sure you want to delete this page?')
-    if (!confirmed) return
-
-    setDeletingId(id)
-
-    try {
-      const response = await fetch(`/api/businesses/${id}`, {
-        method: 'DELETE',
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete page')
-      }
-
-      setSavedBusinesses((prev) => prev.filter((business) => business.id !== id))
-
-      if (editingId === id) {
-        resetForm()
-      }
-
-      setMessage('Page deleted successfully.')
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed')
-    } finally {
-      setDeletingId('')
-    }
-  }
-
   async function handleEdit(id: string) {
     setLoadingEdit(true)
-    setError('')
     setMessage('')
+    setError('')
 
     try {
-      const response = await fetch(`/api/businesses/${id}`)
-      const data = await response.json()
+      const snapshot = await getDoc(doc(db, 'businesses', id))
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to load page')
+      if (!snapshot.exists()) {
+        throw new Error('Page not found.')
       }
 
-      const business = data.business as Business
-      const businessLinks = data.links as BusinessLink[]
+      const data = snapshot.data()
+      const businessLinks = (data.links || []) as LinkItem[]
 
       const nextForm: FormData = {
-        businessName: business.name || '',
-        tagline: business.tagline || '',
-        template: business.template || 'classic-dark',
-        logoUrl: business.logo_url || '',
-        isPublished: Boolean(business.is_published),
+        businessName: data.name || '',
+        tagline: data.tagline || '',
+        template: data.template || 'classic-dark',
+        logoUrl: data.logoUrl || '',
+        isPublished: Boolean(data.isPublished),
         whatsapp: '',
         instagram: '',
         googleReviews: '',
@@ -300,22 +297,39 @@ export default function DashboardPage() {
       }
 
       setForm(nextForm)
-      setEditingId(business.id)
+      setEditingId(id)
       setActiveTab('create')
       setMessage('Page loaded for editing.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load page')
+      setError(err instanceof Error ? err.message : 'Failed to load page.')
     } finally {
       setLoadingEdit(false)
     }
   }
 
-  async function handleLogout() {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-    })
+  async function handleDelete(id: string) {
+    const confirmed = window.confirm('Are you sure you want to delete this page?')
+    if (!confirmed) return
 
-    window.location.href = '/'
+    setDeletingId(id)
+    setMessage('')
+    setError('')
+
+    try {
+      await deleteDoc(doc(db, 'businesses', id))
+
+      setSavedBusinesses((prev) => prev.filter((business) => business.id !== id))
+
+      if (editingId === id) {
+        resetForm()
+      }
+
+      setMessage('Page deleted successfully.')
+    } catch {
+      setError('Failed to delete page.')
+    } finally {
+      setDeletingId('')
+    }
   }
 
   async function copyPublicLink(slugValue: string) {
@@ -342,9 +356,8 @@ export default function DashboardPage() {
       setTimeout(() => {
         setMessage('')
       }, 2500)
-    } catch (err) {
-      console.error(err)
-      setError('Failed to copy link')
+    } catch {
+      setError('Failed to copy link.')
     }
   }
 
@@ -352,38 +365,60 @@ export default function DashboardPage() {
     setOpenQrId((prev) => (prev === id ? null : id))
   }
 
+  async function handleLogout() {
+    await signOut(auth)
+    router.push('/')
+  }
+
+  function renderLogo(src: string, alt: string, className: string) {
+    if (!src) return null
+
+    return (
+      <Image
+        src={src}
+        alt={alt}
+        width={80}
+        height={80}
+        className={className}
+        unoptimized
+      />
+    )
+  }
+
   function renderPreviewCard() {
     const hasLogo = Boolean(form.logoUrl)
+
+    const previewLinks =
+      links.length > 0
+        ? links
+        : [
+            { type: 'whatsapp', label: 'WhatsApp', url: '#' },
+            { type: 'instagram', label: 'Instagram', url: '#' },
+            { type: 'google', label: 'Google Reviews', url: '#' },
+          ]
 
     if (form.template === 'minimal-light') {
       return (
         <div className="flex min-h-[430px] flex-col items-center rounded-[20px] border border-[var(--border)] bg-[#faf6f1] px-5 py-6 text-center text-[var(--text)]">
           {hasLogo ? (
-            <Image
-              src={form.logoUrl}
-              alt="Business logo"
-              width={72}
-              height={72}
-              className="mb-4 h-[72px] w-[72px] rounded-full object-cover border border-[var(--border)]"
-            />
+            renderLogo(
+              form.logoUrl,
+              'Business logo',
+              'mb-4 h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover'
+            )
           ) : (
             <div className="mb-4 h-16 w-16 rounded-full bg-[var(--border)]" />
           )}
 
-          <h3 className="text-lg font-semibold">{form.businessName || 'Business Name'}</h3>
+          <h3 className="text-lg font-semibold">
+            {form.businessName || 'Business Name'}
+          </h3>
           <p className="mt-1 text-sm text-[var(--mocha)]/70">
             {form.tagline || 'Tap to connect'}
           </p>
 
           <div className="mt-8 w-full space-y-3">
-            {(links.length
-              ? links
-              : [
-                  { type: 'whatsapp', label: 'WhatsApp', url: '#' },
-                  { type: 'instagram', label: 'Instagram', url: '#' },
-                  { type: 'google', label: 'Google Reviews', url: '#' },
-                ]
-            ).map((link) => (
+            {previewLinks.map((link) => (
               <div
                 key={link.type}
                 className="rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm"
@@ -400,31 +435,24 @@ export default function DashboardPage() {
       return (
         <div className="flex min-h-[430px] flex-col items-center rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-5 py-6 text-center text-[var(--text)] shadow-lg">
           {hasLogo ? (
-            <Image
-              src={form.logoUrl}
-              alt="Business logo"
-              width={80}
-              height={80}
-              className="mb-4 h-20 w-20 rounded-2xl object-cover border border-white/60 shadow"
-            />
+            renderLogo(
+              form.logoUrl,
+              'Business logo',
+              'mb-4 h-20 w-20 rounded-2xl border border-white/60 object-cover shadow'
+            )
           ) : (
             <div className="mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
 
-          <h3 className="text-xl font-bold">{form.businessName || 'Business Name'}</h3>
+          <h3 className="text-xl font-bold">
+            {form.businessName || 'Business Name'}
+          </h3>
           <p className="mt-1 text-sm text-[var(--mocha)]/80">
             {form.tagline || 'Tap to connect'}
           </p>
 
           <div className="mt-8 w-full space-y-3">
-            {(links.length
-              ? links
-              : [
-                  { type: 'whatsapp', label: 'WhatsApp', url: '#' },
-                  { type: 'instagram', label: 'Instagram', url: '#' },
-                  { type: 'google', label: 'Google Reviews', url: '#' },
-                ]
-            ).map((link) => (
+            {previewLinks.map((link) => (
               <div
                 key={link.type}
                 className="rounded-2xl bg-white/80 px-4 py-3 text-sm font-medium shadow-sm"
@@ -440,31 +468,24 @@ export default function DashboardPage() {
     return (
       <div className="flex min-h-[430px] flex-col items-center rounded-[20px] bg-[linear-gradient(180deg,#3d2b1f_0%,#201710_100%)] px-5 py-6 text-center text-white">
         {hasLogo ? (
-          <Image
-            src={form.logoUrl}
-            alt="Business logo"
-            width={72}
-            height={72}
-            className="mb-5 h-[72px] w-[72px] rounded-full object-cover border border-white/20"
-          />
+          renderLogo(
+            form.logoUrl,
+            'Business logo',
+            'mb-5 h-[72px] w-[72px] rounded-full border border-white/20 object-cover'
+          )
         ) : (
           <div className="mb-5 h-16 w-16 rounded-full bg-white/10" />
         )}
 
-        <h3 className="text-lg font-semibold">{form.businessName || 'Business Name'}</h3>
+        <h3 className="text-lg font-semibold">
+          {form.businessName || 'Business Name'}
+        </h3>
         <p className="mt-1 text-sm text-white/70">
           {form.tagline || 'Tap to connect'}
         </p>
 
         <div className="mt-8 w-full space-y-3">
-          {(links.length
-            ? links
-            : [
-                { type: 'whatsapp', label: 'WhatsApp', url: '#' },
-                { type: 'instagram', label: 'Instagram', url: '#' },
-                { type: 'google', label: 'Google Reviews', url: '#' },
-              ]
-          ).map((link) => (
+          {previewLinks.map((link) => (
             <div
               key={link.type}
               className="rounded-full bg-white/10 px-4 py-3 text-sm"
@@ -474,6 +495,14 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
+    )
+  }
+
+  if (authLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+        <p className="text-sm text-[var(--mocha)]">Loading dashboard...</p>
+      </main>
     )
   }
 
@@ -638,48 +667,26 @@ export default function DashboardPage() {
                       onChange={(e) => updateField('isPublished', e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <label htmlFor="publish-toggle" className="text-sm font-medium text-[var(--text)]">
+                    <label
+                      htmlFor="publish-toggle"
+                      className="text-sm font-medium text-[var(--text)]"
+                    >
                       Publish this page
                     </label>
                   </div>
 
                   <div>
                     <label className="mb-2 block text-sm font-medium text-[var(--mocha)]">
-                      Upload Logo
+                      Logo URL
                     </label>
-
                     <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) handleLogoUpload(file)
-                      }}
+                      type="url"
+                      value={form.logoUrl}
+                      onChange={(e) => updateField('logoUrl', e.target.value)}
+                      placeholder="https://example.com/logo.png"
                       className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                     />
-
-                    {uploadingLogo ? (
-                      <p className="mt-2 text-sm text-[var(--mocha)]/70">Uploading logo...</p>
-                    ) : null}
-
-                    {form.logoUrl ? (
-                      <div className="mt-3 flex items-center gap-3">
-                        <Image
-                          src={form.logoUrl}
-                          alt="Uploaded logo"
-                          width={56}
-                          height={56}
-                          className="h-14 w-14 rounded-full object-cover border border-[var(--border)]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateField('logoUrl', '')}
-                          className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
-                        >
-                          Remove Logo
-                        </button>
-                      </div>
-                    ) : null}
+                
                   </div>
 
                   <div className="pt-2">
@@ -688,65 +695,50 @@ export default function DashboardPage() {
                     </h3>
 
                     <div className="space-y-3">
-                      <div>
-                        <label className="mb-1 block text-sm text-[var(--mocha)]">WhatsApp</label>
-                        <input
-                          value={form.whatsapp}
-                          onChange={(e) => updateField('whatsapp', e.target.value)}
-                          type="text"
-                          placeholder="https://wa.me/your-number"
-                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                        />
-                      </div>
+                      <input
+                        value={form.whatsapp}
+                        onChange={(e) => updateField('whatsapp', e.target.value)}
+                        placeholder="WhatsApp URL"
+                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      />
 
-                      <div>
-                        <label className="mb-1 block text-sm text-[var(--mocha)]">Instagram</label>
-                        <input
-                          value={form.instagram}
-                          onChange={(e) => updateField('instagram', e.target.value)}
-                          type="text"
-                          placeholder="https://instagram.com/yourbusiness"
-                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                        />
-                      </div>
+                      <input
+                        value={form.instagram}
+                        onChange={(e) => updateField('instagram', e.target.value)}
+                        placeholder="Instagram URL"
+                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      />
 
-                      <div>
-                        <label className="mb-1 block text-sm text-[var(--mocha)]">Google Reviews</label>
-                        <input
-                          value={form.googleReviews}
-                          onChange={(e) => updateField('googleReviews', e.target.value)}
-                          type="text"
-                          placeholder="https://g.page/r/your-review-link"
-                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                        />
-                      </div>
+                      <input
+                        value={form.googleReviews}
+                        onChange={(e) => updateField('googleReviews', e.target.value)}
+                        placeholder="Google Reviews URL"
+                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      />
 
-                      <div>
-                        <label className="mb-1 block text-sm text-[var(--mocha)]">Facebook</label>
-                        <input
-                          value={form.facebook}
-                          onChange={(e) => updateField('facebook', e.target.value)}
-                          type="text"
-                          placeholder="https://facebook.com/yourbusiness"
-                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                        />
-                      </div>
+                      <input
+                        value={form.facebook}
+                        onChange={(e) => updateField('facebook', e.target.value)}
+                        placeholder="Facebook URL"
+                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      />
 
-                      <div>
-                        <label className="mb-1 block text-sm text-[var(--mocha)]">Website</label>
-                        <input
-                          value={form.website}
-                          onChange={(e) => updateField('website', e.target.value)}
-                          type="text"
-                          placeholder="https://yourbusiness.com"
-                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                        />
-                      </div>
+                      <input
+                        value={form.website}
+                        onChange={(e) => updateField('website', e.target.value)}
+                        placeholder="Website URL"
+                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      />
                     </div>
                   </div>
 
-                  {message ? <p className="text-sm font-medium text-green-700">{message}</p> : null}
-                  {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+                  {message ? (
+                    <p className="text-sm font-medium text-green-700">{message}</p>
+                  ) : null}
+
+                  {error ? (
+                    <p className="text-sm font-medium text-red-700">{error}</p>
+                  ) : null}
 
                   <button
                     type="submit"
@@ -779,8 +771,13 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                {message ? <p className="mb-4 text-sm font-medium text-green-700">{message}</p> : null}
-                {error ? <p className="mb-4 text-sm font-medium text-red-700">{error}</p> : null}
+                {message ? (
+                  <p className="mb-4 text-sm font-medium text-green-700">{message}</p>
+                ) : null}
+
+                {error ? (
+                  <p className="mb-4 text-sm font-medium text-red-700">{error}</p>
+                ) : null}
 
                 {loadingPages ? (
                   <p className="text-sm text-[var(--mocha)]/70">Loading pages...</p>
@@ -791,7 +788,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="space-y-4">
                     {savedBusinesses.map((business) => {
-                      const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/preview/${business.slug}`
+                      const publicUrl = `${window.location.origin}/preview/${business.slug}`
 
                       return (
                         <div
@@ -799,43 +796,30 @@ export default function DashboardPage() {
                           className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm"
                         >
                           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-3">
-                              {business.logo_url ? (
-                                <Image
-                                  src={business.logo_url}
-                                  alt={`${business.name} logo`}
-                                  width={48}
-                                  height={48}
-                                  className="h-12 w-12 rounded-full object-cover border border-[var(--border)]"
-                                />
-                              ) : (
-                                <div className="h-12 w-12 rounded-full bg-[var(--border)]" />
-                              )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-semibold text-[var(--text)]">
+                                  {business.name}
+                                </h3>
 
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h3 className="text-lg font-semibold text-[var(--text)]">
-                                    {business.name}
-                                  </h3>
-                                  <span
-                                    className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                      business.is_published
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-gray-100 text-gray-600'
-                                    }`}
-                                  >
-                                    {business.is_published ? 'Published' : 'Draft'}
-                                  </span>
-                                </div>
-
-                                <p className="mt-1 text-sm text-[var(--mocha)]/70">
-                                  {business.tagline || 'No tagline'}
-                                </p>
-
-                                <p className="mt-2 text-xs text-[var(--mocha)]/60">
-                                  /preview/{business.slug}
-                                </p>
+                                <span
+                                  className={`rounded-full px-2 py-1 text-xs font-medium ${
+                                    business.isPublished
+                                      ? 'bg-green-100 text-green-700'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {business.isPublished ? 'Published' : 'Draft'}
+                                </span>
                               </div>
+
+                              <p className="mt-1 text-sm text-[var(--mocha)]/70">
+                                {business.tagline || 'No tagline'}
+                              </p>
+
+                              <p className="mt-2 text-xs text-[var(--mocha)]/60">
+                                /preview/{business.slug}
+                              </p>
                             </div>
 
                             <div className="flex flex-wrap gap-2">
@@ -850,7 +834,7 @@ export default function DashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => copyPublicLink(business.slug)}
-                                className="cursor-pointer rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[#f8f4ef]"
+                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[#f8f4ef]"
                               >
                                 Copy Link
                               </button>
@@ -906,7 +890,9 @@ export default function DashboardPage() {
           </section>
 
           <aside className="h-fit rounded-[28px] bg-[rgba(255,255,255,0.9)] p-5 shadow-2xl backdrop-blur-md">
-            <h2 className="mb-4 text-xl font-semibold text-[var(--text)]">Preview</h2>
+            <h2 className="mb-4 text-xl font-semibold text-[var(--text)]">
+              Preview
+            </h2>
 
             <div className="mx-auto w-full max-w-[280px] rounded-[24px] bg-white p-4 shadow-inner">
               {renderPreviewCard()}

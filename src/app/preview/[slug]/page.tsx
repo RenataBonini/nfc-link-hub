@@ -1,5 +1,9 @@
+'use client'
+
 import Image from 'next/image'
-import db from '@/lib/db'
+import { use, useEffect, useState } from 'react'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 type Props = {
   params: Promise<{
@@ -7,30 +11,77 @@ type Props = {
   }>
 }
 
-type Business = {
-  id: string
-  name: string
-  tagline: string | null
-  slug: string
-  template: 'classic-dark' | 'minimal-light' | 'warm-card'
-  logo_url: string | null
-  is_published: number
-}
+type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
 
-type BusinessLink = {
-  id: string
+type LinkItem = {
   type: string
   label: string
   url: string
-  sort_order: number
 }
 
-export default async function PublicLandingPage({ params }: Props) {
-  const { slug } = await params
+type Business = {
+  id: string
+  name: string
+  tagline: string
+  slug: string
+  template: TemplateType
+  logoUrl: string
+  isPublished: boolean
+  links: LinkItem[]
+}
 
-  const business = db
-    .prepare('SELECT * FROM businesses WHERE slug = ?')
-    .get(slug) as Business | undefined
+export default function PublicLandingPage({ params }: Props) {
+  const { slug } = use(params)
+
+  const [business, setBusiness] = useState<Business | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadBusiness() {
+      try {
+        const businessQuery = query(
+          collection(db, 'businesses'),
+          where('slug', '==', slug)
+        )
+
+        const snapshot = await getDocs(businessQuery)
+
+        if (snapshot.empty) {
+          setBusiness(null)
+          return
+        }
+
+        const document = snapshot.docs[0]
+        const data = document.data()
+
+        setBusiness({
+          id: document.id,
+          name: data.name || '',
+          tagline: data.tagline || '',
+          slug: data.slug || '',
+          template: data.template || 'classic-dark',
+          logoUrl: data.logoUrl || '',
+          isPublished: Boolean(data.isPublished),
+          links: data.links || [],
+        })
+      } catch (error) {
+        console.error(error)
+        setBusiness(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadBusiness()
+  }, [slug])
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6">
+        <p className="text-lg text-[var(--text)]">Loading page...</p>
+      </main>
+    )
+  }
 
   if (!business) {
     return (
@@ -40,92 +91,107 @@ export default async function PublicLandingPage({ params }: Props) {
     )
   }
 
-  if (!business.is_published) {
+  if (!business.isPublished) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-lg text-[var(--text)]">This page is not published yet.</p>
+        <p className="text-lg text-[var(--text)]">
+          This page is not published yet.
+        </p>
       </main>
     )
   }
 
-  const safeBusiness = business
+  const hasLogo = Boolean(business.logoUrl)
 
-  const links = db
-    .prepare('SELECT * FROM business_links WHERE business_id = ? ORDER BY sort_order ASC')
-    .all(safeBusiness.id) as BusinessLink[]
+  function renderLogo(className: string, width = 84, height = 84) {
+    if (!business?.logoUrl) return null
 
-  const hasLogo = Boolean(safeBusiness.logo_url)
+    return (
+      <Image
+        src={business.logoUrl}
+        alt={`${business.name} logo`}
+        width={width}
+        height={height}
+        className={className}
+        unoptimized
+      />
+    )
+  }
+
+  function renderLinks(linkClassName: string) {
+    if (!business || business.links.length === 0) {
+      return (
+        <p className="text-sm opacity-70">
+          No links have been added yet.
+        </p>
+      )
+    }
+
+    return business.links.map((link) => (
+      <a
+        key={`${link.type}-${link.url}`}
+        href={link.url}
+        target="_blank"
+        rel="noreferrer"
+        className={linkClassName}
+      >
+        {link.label}
+      </a>
+    ))
+  }
 
   function renderCard() {
-    if (safeBusiness.template === 'minimal-light') {
+    if (!business) return null
+
+    if (business.template === 'minimal-light') {
       return (
         <div className="rounded-[24px] border border-[var(--border)] bg-[#faf6f1] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
-            <Image
-              src={safeBusiness.logo_url!}
-              alt={`${safeBusiness.name} logo`}
-              width={84}
-              height={84}
-              className="mx-auto mb-4 h-[84px] w-[84px] rounded-full object-cover border border-[var(--border)]"
-            />
+            renderLogo(
+              'mx-auto mb-4 h-[84px] w-[84px] rounded-full border border-[var(--border)] object-cover'
+            )
           ) : (
             <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-[var(--border)]" />
           )}
 
-          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
+          <h1 className="text-2xl font-bold">{business.name}</h1>
+
           <p className="mt-2 text-sm text-[var(--mocha)]/70">
-            {safeBusiness.tagline || 'Connect with us instantly'}
+            {business.tagline || 'Connect with us instantly'}
           </p>
 
           <div className="mt-8 space-y-3">
-            {links.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--text)]"
-              >
-                {link.label}
-              </a>
-            ))}
+            {renderLinks(
+              'block rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--text)]'
+            )}
           </div>
         </div>
       )
     }
 
-    if (safeBusiness.template === 'warm-card') {
+    if (business.template === 'warm-card') {
       return (
         <div className="rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
-            <Image
-              src={safeBusiness.logo_url!}
-              alt={`${safeBusiness.name} logo`}
-              width={88}
-              height={88}
-              className="mx-auto mb-4 h-[88px] w-[88px] rounded-2xl object-cover border border-white/60 shadow"
-            />
+            renderLogo(
+              'mx-auto mb-4 h-[88px] w-[88px] rounded-2xl border border-white/60 object-cover shadow',
+              88,
+              88
+            )
           ) : (
             <div className="mx-auto mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
 
-          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
+          <h1 className="text-2xl font-bold">{business.name}</h1>
+
           <p className="mt-2 text-sm text-[var(--mocha)]/80">
-            {safeBusiness.tagline || 'Connect with us instantly'}
+            {business.tagline || 'Connect with us instantly'}
           </p>
 
           <div className="mt-8 space-y-3">
-            {links.map((link) => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block rounded-2xl bg-white/80 px-4 py-3 text-sm font-medium text-[var(--text)] shadow-sm"
-              >
-                {link.label}
-              </a>
-            ))}
+            {renderLinks(
+              'block rounded-2xl bg-white/80 px-4 py-3 text-sm font-medium text-[var(--text)] shadow-sm'
+            )}
           </div>
         </div>
       )
@@ -134,34 +200,23 @@ export default async function PublicLandingPage({ params }: Props) {
     return (
       <div className="rounded-[24px] bg-[linear-gradient(180deg,#3d2b1f_0%,#1f1813_100%)] px-6 py-8 text-center text-white shadow-2xl">
         {hasLogo ? (
-          <Image
-            src={safeBusiness.logo_url!}
-            alt={`${safeBusiness.name} logo`}
-            width={84}
-            height={84}
-            className="mx-auto mb-4 h-[84px] w-[84px] rounded-full object-cover border border-white/20"
-          />
+          renderLogo(
+            'mx-auto mb-4 h-[84px] w-[84px] rounded-full border border-white/20 object-cover'
+          )
         ) : (
           <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/10" />
         )}
 
-        <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
+        <h1 className="text-2xl font-bold">{business.name}</h1>
+
         <p className="mt-2 text-sm text-white/70">
-          {safeBusiness.tagline || 'Connect with us instantly'}
+          {business.tagline || 'Connect with us instantly'}
         </p>
 
         <div className="mt-8 space-y-3">
-          {links.map((link) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noreferrer"
-              className="block rounded-full bg-white/10 px-4 py-3 text-sm font-medium text-white"
-            >
-              {link.label}
-            </a>
-          ))}
+          {renderLinks(
+            'block rounded-full bg-white/10 px-4 py-3 text-sm font-medium text-white'
+          )}
         </div>
       </div>
     )

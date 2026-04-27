@@ -2,14 +2,17 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '@/lib/firebase'
 import { useState } from 'react'
 
 export default function HomePage() {
   const router = useRouter()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -17,27 +20,16 @@ export default function HomePage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
-      }
-
+      await signInWithEmailAndPassword(auth, email.trim(), password)
       router.push('/dashboard')
-      router.refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch (err: unknown) {
+      console.error(err)
+
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('Invalid email or password.')
+      }
     } finally {
       setLoading(false)
     }
@@ -85,7 +77,9 @@ export default function HomePage() {
           </div>
 
           {error ? (
-            <p className="text-sm font-medium text-red-700">{error}</p>
+            <p className="break-words text-sm font-medium text-red-700">
+              {error}
+            </p>
           ) : null}
 
           <button
@@ -99,6 +93,7 @@ export default function HomePage() {
 
         <div className="mt-6 flex items-center justify-between text-sm text-[var(--mocha)]/70">
           <span>New user?</span>
+
           <Link href="/register" className="font-semibold text-[var(--brand-dark)]">
             Create account
           </Link>
