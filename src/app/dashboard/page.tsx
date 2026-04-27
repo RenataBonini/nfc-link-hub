@@ -13,7 +13,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -51,6 +50,8 @@ type Business = {
   template: TemplateType
   logoUrl: string
   isPublished: boolean
+  views: number
+  clicks: number
 }
 
 const initialForm: FormData = {
@@ -104,11 +105,19 @@ export default function DashboardPage() {
     const items: LinkItem[] = []
 
     if (form.whatsapp.trim()) {
-      items.push({ type: 'whatsapp', label: 'WhatsApp', url: form.whatsapp.trim() })
+      items.push({
+        type: 'whatsapp',
+        label: 'WhatsApp',
+        url: form.whatsapp.trim(),
+      })
     }
 
     if (form.instagram.trim()) {
-      items.push({ type: 'instagram', label: 'Instagram', url: form.instagram.trim() })
+      items.push({
+        type: 'instagram',
+        label: 'Instagram',
+        url: form.instagram.trim(),
+      })
     }
 
     if (form.googleReviews.trim()) {
@@ -120,11 +129,19 @@ export default function DashboardPage() {
     }
 
     if (form.facebook.trim()) {
-      items.push({ type: 'facebook', label: 'Facebook', url: form.facebook.trim() })
+      items.push({
+        type: 'facebook',
+        label: 'Facebook',
+        url: form.facebook.trim(),
+      })
     }
 
     if (form.website.trim()) {
-      items.push({ type: 'website', label: 'Website', url: form.website.trim() })
+      items.push({
+        type: 'website',
+        label: 'Website',
+        url: form.website.trim(),
+      })
     }
 
     return items
@@ -164,8 +181,7 @@ export default function DashboardPage() {
     try {
       const businessesQuery = query(
         collection(db, 'businesses'),
-        where('ownerId', '==', user.uid),
-        orderBy('createdAt', 'desc')
+        where('ownerId', '==', user.uid)
       )
 
       const snapshot = await getDocs(businessesQuery)
@@ -176,12 +192,14 @@ export default function DashboardPage() {
         return {
           id: document.id,
           ownerId: data.ownerId,
-          name: data.name,
+          name: data.name || '',
           tagline: data.tagline || '',
-          slug: data.slug,
+          slug: data.slug || '',
           template: data.template || 'classic-dark',
           logoUrl: data.logoUrl || '',
           isPublished: Boolean(data.isPublished),
+          views: data.views || 0,
+          clicks: data.clicks || 0,
         } as Business
       })
 
@@ -245,8 +263,11 @@ export default function DashboardPage() {
       } else {
         await addDoc(collection(db, 'businesses'), {
           ...payload,
+          views: 0,
+          clicks: 0,
           createdAt: serverTimestamp(),
         })
+
         setMessage(`Page created successfully: /preview/${slug}`)
       }
 
@@ -361,6 +382,26 @@ export default function DashboardPage() {
     }
   }
 
+  async function togglePublish(business: Business) {
+    try {
+      await updateDoc(doc(db, 'businesses', business.id), {
+        isPublished: !business.isPublished,
+      })
+
+      setSavedBusinesses((prev) =>
+        prev.map((item) =>
+          item.id === business.id
+            ? { ...item, isPublished: !item.isPublished }
+            : item
+        )
+      )
+
+      setMessage(business.isPublished ? 'Page unpublished.' : 'Page published.')
+    } catch {
+      setError('Failed to update publish status.')
+    }
+  }
+
   function toggleQr(id: string) {
     setOpenQrId((prev) => (prev === id ? null : id))
   }
@@ -413,6 +454,7 @@ export default function DashboardPage() {
           <h3 className="text-lg font-semibold">
             {form.businessName || 'Business Name'}
           </h3>
+
           <p className="mt-1 text-sm text-[var(--mocha)]/70">
             {form.tagline || 'Tap to connect'}
           </p>
@@ -447,6 +489,7 @@ export default function DashboardPage() {
           <h3 className="text-xl font-bold">
             {form.businessName || 'Business Name'}
           </h3>
+
           <p className="mt-1 text-sm text-[var(--mocha)]/80">
             {form.tagline || 'Tap to connect'}
           </p>
@@ -480,6 +523,7 @@ export default function DashboardPage() {
         <h3 className="text-lg font-semibold">
           {form.businessName || 'Business Name'}
         </h3>
+
         <p className="mt-1 text-sm text-white/70">
           {form.tagline || 'Tap to connect'}
         </p>
@@ -511,7 +555,9 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-4 text-white sm:flex-row sm:items-center sm:justify-between">
           <div className="text-center sm:text-left">
-            <h1 className="text-3xl font-bold sm:text-4xl">NFC Link Hub Builder</h1>
+            <h1 className="text-3xl font-bold sm:text-4xl">
+              NFC Link Hub Builder
+            </h1>
             <p className="mt-2 text-sm text-white/80 sm:text-base">
               Create simple landing pages for your NFC tags
             </p>
@@ -620,44 +666,29 @@ export default function DashboardPage() {
                 </div>
 
                 <form className="space-y-4" onSubmit={handleSubmit}>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[var(--mocha)]">
-                      Business Name
-                    </label>
-                    <input
-                      type="text"
-                      value={form.businessName}
-                      onChange={(e) => updateField('businessName', e.target.value)}
-                      placeholder="Your Awesome Business"
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                      required
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={form.businessName}
+                    onChange={(e) => updateField('businessName', e.target.value)}
+                    placeholder="Business name"
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                    required
+                  />
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[var(--mocha)]">
-                      Tagline
-                    </label>
-                    <input
-                      type="text"
-                      value={form.tagline}
-                      onChange={(e) => updateField('tagline', e.target.value)}
-                      placeholder="Your catchy tagline"
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={form.tagline}
+                    onChange={(e) => updateField('tagline', e.target.value)}
+                    placeholder="Tagline"
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  />
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[var(--mocha)]">
-                      Slug
-                    </label>
-                    <input
-                      type="text"
-                      value={slug}
-                      readOnly
-                      className="w-full rounded-xl border border-[var(--border)] bg-[#f5efe8] px-4 py-3 text-sm text-[var(--mocha)]"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    value={slug}
+                    readOnly
+                    className="w-full rounded-xl border border-[var(--border)] bg-[#f5efe8] px-4 py-3 text-sm text-[var(--mocha)]"
+                  />
 
                   <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3">
                     <input
@@ -675,19 +706,13 @@ export default function DashboardPage() {
                     </label>
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-[var(--mocha)]">
-                      Logo URL
-                    </label>
-                    <input
-                      type="url"
-                      value={form.logoUrl}
-                      onChange={(e) => updateField('logoUrl', e.target.value)}
-                      placeholder="https://example.com/logo.png"
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                    />
-                
-                  </div>
+                  <input
+                    type="url"
+                    value={form.logoUrl}
+                    onChange={(e) => updateField('logoUrl', e.target.value)}
+                    placeholder="Logo URL"
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  />
 
                   <div className="pt-2">
                     <h3 className="mb-3 text-lg font-semibold text-[var(--text)]">
@@ -797,7 +822,7 @@ export default function DashboardPage() {
                         >
                           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <h3 className="text-lg font-semibold text-[var(--text)]">
                                   {business.name}
                                 </h3>
@@ -819,6 +844,10 @@ export default function DashboardPage() {
 
                               <p className="mt-2 text-xs text-[var(--mocha)]/60">
                                 /preview/{business.slug}
+                              </p>
+
+                              <p className="mt-2 text-xs text-[var(--mocha)]/70">
+                                👁 {business.views} views • 🔗 {business.clicks} clicks
                               </p>
                             </div>
 
@@ -845,6 +874,14 @@ export default function DashboardPage() {
                                 className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
                               >
                                 {openQrId === business.id ? 'Hide QR' : 'Show QR'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => togglePublish(business)}
+                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                              >
+                                {business.isPublished ? 'Unpublish' : 'Publish'}
                               </button>
 
                               <button

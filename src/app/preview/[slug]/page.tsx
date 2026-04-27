@@ -2,7 +2,15 @@
 
 import Image from 'next/image'
 import { use, useEffect, useState } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  getDocs,
+  increment,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 type Props = {
@@ -10,8 +18,6 @@ type Props = {
     slug: string
   }>
 }
-
-type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
 
 type LinkItem = {
   type: string
@@ -24,7 +30,7 @@ type Business = {
   name: string
   tagline: string
   slug: string
-  template: TemplateType
+  template: 'classic-dark' | 'minimal-light' | 'warm-card'
   logoUrl: string
   isPublished: boolean
   links: LinkItem[]
@@ -39,23 +45,23 @@ export default function PublicLandingPage({ params }: Props) {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const businessQuery = query(
+        const q = query(
           collection(db, 'businesses'),
           where('slug', '==', slug)
         )
 
-        const snapshot = await getDocs(businessQuery)
+        const snapshot = await getDocs(q)
 
         if (snapshot.empty) {
           setBusiness(null)
           return
         }
 
-        const document = snapshot.docs[0]
-        const data = document.data()
+        const docSnap = snapshot.docs[0]
+        const data = docSnap.data()
 
-        setBusiness({
-          id: document.id,
+        const loadedBusiness: Business = {
+          id: docSnap.id,
           name: data.name || '',
           tagline: data.tagline || '',
           slug: data.slug || '',
@@ -63,7 +69,15 @@ export default function PublicLandingPage({ params }: Props) {
           logoUrl: data.logoUrl || '',
           isPublished: Boolean(data.isPublished),
           links: data.links || [],
-        })
+        }
+
+        setBusiness(loadedBusiness)
+
+        if (loadedBusiness.isPublished) {
+          await updateDoc(doc(db, 'businesses', docSnap.id), {
+            views: increment(1),
+          })
+        }
       } catch (error) {
         console.error(error)
         setBusiness(null)
@@ -74,6 +88,16 @@ export default function PublicLandingPage({ params }: Props) {
 
     loadBusiness()
   }, [slug])
+
+  async function trackClick(businessId: string) {
+    try {
+      await updateDoc(doc(db, 'businesses', businessId), {
+        clicks: increment(1),
+      })
+    } catch (error) {
+      console.error('Click tracking failed:', error)
+    }
+  }
 
   if (loading) {
     return (
@@ -101,15 +125,16 @@ export default function PublicLandingPage({ params }: Props) {
     )
   }
 
-  const hasLogo = Boolean(business.logoUrl)
+  const safeBusiness = business
+  const hasLogo = Boolean(safeBusiness.logoUrl)
 
   function renderLogo(className: string, width = 84, height = 84) {
-    if (!business?.logoUrl) return null
+    if (!safeBusiness.logoUrl) return null
 
     return (
       <Image
-        src={business.logoUrl}
-        alt={`${business.name} logo`}
+        src={safeBusiness.logoUrl}
+        alt={`${safeBusiness.name} logo`}
         width={width}
         height={height}
         className={className}
@@ -119,7 +144,7 @@ export default function PublicLandingPage({ params }: Props) {
   }
 
   function renderLinks(linkClassName: string) {
-    if (!business || business.links.length === 0) {
+    if (safeBusiness.links.length === 0) {
       return (
         <p className="text-sm opacity-70">
           No links have been added yet.
@@ -127,12 +152,13 @@ export default function PublicLandingPage({ params }: Props) {
       )
     }
 
-    return business.links.map((link) => (
+    return safeBusiness.links.map((link) => (
       <a
         key={`${link.type}-${link.url}`}
         href={link.url}
         target="_blank"
         rel="noreferrer"
+        onClick={() => trackClick(safeBusiness.id)}
         className={linkClassName}
       >
         {link.label}
@@ -141,9 +167,7 @@ export default function PublicLandingPage({ params }: Props) {
   }
 
   function renderCard() {
-    if (!business) return null
-
-    if (business.template === 'minimal-light') {
+    if (safeBusiness.template === 'minimal-light') {
       return (
         <div className="rounded-[24px] border border-[var(--border)] bg-[#faf6f1] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
@@ -154,10 +178,10 @@ export default function PublicLandingPage({ params }: Props) {
             <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-[var(--border)]" />
           )}
 
-          <h1 className="text-2xl font-bold">{business.name}</h1>
+          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
 
           <p className="mt-2 text-sm text-[var(--mocha)]/70">
-            {business.tagline || 'Connect with us instantly'}
+            {safeBusiness.tagline || 'Connect with us instantly'}
           </p>
 
           <div className="mt-8 space-y-3">
@@ -169,7 +193,7 @@ export default function PublicLandingPage({ params }: Props) {
       )
     }
 
-    if (business.template === 'warm-card') {
+    if (safeBusiness.template === 'warm-card') {
       return (
         <div className="rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
@@ -182,10 +206,10 @@ export default function PublicLandingPage({ params }: Props) {
             <div className="mx-auto mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
 
-          <h1 className="text-2xl font-bold">{business.name}</h1>
+          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
 
           <p className="mt-2 text-sm text-[var(--mocha)]/80">
-            {business.tagline || 'Connect with us instantly'}
+            {safeBusiness.tagline || 'Connect with us instantly'}
           </p>
 
           <div className="mt-8 space-y-3">
@@ -207,10 +231,10 @@ export default function PublicLandingPage({ params }: Props) {
           <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/10" />
         )}
 
-        <h1 className="text-2xl font-bold">{business.name}</h1>
+        <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
 
         <p className="mt-2 text-sm text-white/70">
-          {business.tagline || 'Connect with us instantly'}
+          {safeBusiness.tagline || 'Connect with us instantly'}
         </p>
 
         <div className="mt-8 space-y-3">
