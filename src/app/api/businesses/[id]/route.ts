@@ -11,17 +11,18 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
 const db = getFirestore(app)
 
-type Params = {
-  params: { id: string }
+type RouteContext = {
+  params: Promise<{
+    id: string
+  }>
 }
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, { params }: RouteContext) {
   try {
+    const { id } = await params
     const body = await req.json()
 
-    const ref = doc(db, 'businesses', params.id)
-
-    await updateDoc(ref, {
+    await updateDoc(doc(db, 'businesses', id), {
       ...body,
     })
 
@@ -32,11 +33,11 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(req: Request, { params }: Params) {
+export async function DELETE(_: Request, { params }: RouteContext) {
   try {
-    const ref = doc(db, 'businesses', params.id)
+    const { id } = await params
 
-    await deleteDoc(ref)
+    await deleteDoc(doc(db, 'businesses', id))
 
     return NextResponse.json({ success: true })
   } catch (error) {
