@@ -838,7 +838,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="space-y-4">
                     {savedBusinesses.map((business) => {
-                      const publicUrl = `${window.location.origin}/preview/${business.slug}`
+                      const publicUrl = `https://nfc-link-hub.vercel.app/preview/${business.slug}`
 
                       return (
                         <div
