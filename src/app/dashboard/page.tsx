@@ -382,6 +382,31 @@ export default function DashboardPage() {
     }
   }
 
+  function downloadQRCode(slugValue: string) {
+    const canvas = document.getElementById(`qr-${slugValue}`) as HTMLCanvasElement | null
+
+    if (!canvas) {
+      setError('QR code not found.')
+      return
+    }
+
+    const pngUrl = canvas.toDataURL('image/png')
+
+    const link = document.createElement('a')
+    link.href = pngUrl
+    link.download = `${slugValue}-qr.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    setMessage('QR code downloaded successfully.')
+    setError('')
+
+    setTimeout(() => {
+      setMessage('')
+    }, 2500)
+  }
+
   async function togglePublish(business: Business) {
     try {
       await updateDoc(doc(db, 'businesses', business.id), {
@@ -907,13 +932,30 @@ export default function DashboardPage() {
                           {openQrId === business.id ? (
                             <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[#faf6f1] p-4">
                               <div className="flex flex-col items-center gap-3 text-center">
-                                <QRCodeCanvas value={publicUrl} size={180} />
+                                <QRCodeCanvas
+                                  id={`qr-${business.slug}`}
+                                  value={publicUrl}
+                                  size={180}
+                                  bgColor="#ffffff"
+                                  fgColor="#000000"
+                                  level="H"
+                                />
+
                                 <p className="text-sm text-[var(--mocha)]/70">
                                   Scan this QR code to open the page
                                 </p>
+
                                 <p className="break-all text-xs text-[var(--mocha)]/60">
                                   {publicUrl}
                                 </p>
+
+                                <button
+                                  type="button"
+                                  onClick={() => downloadQRCode(business.slug)}
+                                  className="mt-2 rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-white"
+                                >
+                                  Download QR
+                                </button>
                               </div>
                             </div>
                           ) : null}
