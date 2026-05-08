@@ -24,7 +24,6 @@ type Business = {
 
 export default function FlyerPage({ params }: Props) {
   const { slug } = use(params)
-
   const flyerRef = useRef<HTMLDivElement | null>(null)
 
   const [business, setBusiness] = useState<Business | null>(null)
@@ -34,11 +33,7 @@ export default function FlyerPage({ params }: Props) {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const q = query(
-          collection(db, 'businesses'),
-          where('slug', '==', slug)
-        )
-
+        const q = query(collection(db, 'businesses'), where('slug', '==', slug))
         const snapshot = await getDocs(q)
 
         if (snapshot.empty) {
@@ -83,7 +78,7 @@ export default function FlyerPage({ params }: Props) {
 
     const link = document.createElement('a')
     link.href = image
-    link.download = `${business.slug}-flyer.png`
+    link.download = `${business.slug}-nfc-flyer.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -117,7 +112,7 @@ export default function FlyerPage({ params }: Props) {
           <div>
             <h1 className="text-3xl font-bold">Flyer Generator</h1>
             <p className="mt-1 text-sm text-white/80">
-              Download a printable flyer with your QR code.
+              Download a printable NFC-first flyer.
             </p>
           </div>
 
@@ -168,41 +163,56 @@ export default function FlyerPage({ params }: Props) {
                 )}
               </div>
 
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-[#8f6d4e]">
-                Scan or Tap
-              </p>
+             
 
               <h2 className="text-4xl font-bold text-[#2b211b] sm:text-5xl">
                 {business.name}
               </h2>
 
               <p className="mx-auto mt-4 max-w-md text-base leading-7 text-[#8f6d4e]">
-                {business.tagline || 'Connect with us instantly through our digital landing page.'}
+                {business.tagline || 'Tap the NFC tag to connect with us instantly.'}
               </p>
 
-              <div className="my-8 flex justify-center">
-                <div className="rounded-3xl bg-white p-5 shadow-lg">
-                  <QRCodeCanvas
-                    value={publicUrl}
-                    size={220}
-                    bgColor="#ffffff"
-                    fgColor="#000000"
-                    level="H"
-                  />
+              {/* Main NFC section */}
+              <div className="my-10 rounded-[32px] border-2 border-dashed border-[#b8926b] bg-[#f5efe8] px-6 py-10">
+                <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[#2b211b] text-white shadow-lg">
+                  <span className="text-4xl"></span>
                 </div>
+
+                <h3 className="text-3xl font-bold text-[#2b211b]">
+                  Tap Here
+                </h3>
+
+                <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#8f6d4e]">
+                  Place your phone close to the NFC tag to open our digital page.
+                  No app is needed.
+                </p>
+
+                
               </div>
 
-              <h3 className="text-2xl font-bold text-[#2b211b]">
-                Connect with us
-              </h3>
+              {/* Backup QR section */}
+              <div className="rounded-[24px] bg-white px-5 py-5 shadow-sm">
 
-              <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#8f6d4e]">
-                Scan the QR code or tap our NFC tag to access WhatsApp, Instagram,
-                Google Reviews, website links, and more.
-              </p>
+                <div className="flex justify-center">
+                  <div className="rounded-2xl bg-white p-3 shadow-md">
+                    <QRCodeCanvas
+                      value={publicUrl}
+                      size={140}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                      level="H"
+                    />
+                  </div>
+                </div>
 
-              <p className="mt-8 break-all rounded-2xl bg-[#f5efe8] px-4 py-3 text-xs text-[#8f6d4e]">
-                {publicUrl}
+                <p className="mx-auto mt-4 max-w-xs text-xs leading-5 text-[#8f6d4e]">
+                  If NFC is unavailable, scan this QR code instead.
+                </p>
+              </div>
+
+              <p className="mt-8 text-sm font-medium text-[#2b211b]">
+                Tap, scan, connect.
               </p>
             </div>
           </div>
