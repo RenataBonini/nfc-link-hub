@@ -354,7 +354,7 @@ export default function DashboardPage() {
   }
 
   async function copyPublicLink(slugValue: string) {
-    const fullUrl = `${window.location.origin}/preview/${slugValue}`
+    const fullUrl = `https://nfc-link-hub-8yji.vercel.app/preview/${slugValue}`
 
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -883,6 +883,14 @@ export default function DashboardPage() {
                                 className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
                               >
                                 Preview
+                              </Link>
+
+                              <Link
+                                href={`/flyer/${business.slug}`}
+                                target="_blank"
+                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                              >
+                                Flyer
                               </Link>
 
                               <button
