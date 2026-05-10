@@ -109,11 +109,19 @@ export default function DashboardPage() {
     const items: LinkItem[] = []
 
     if (form.whatsapp.trim()) {
-      items.push({ type: 'whatsapp', label: 'WhatsApp', url: form.whatsapp.trim() })
+      items.push({
+        type: 'whatsapp',
+        label: 'WhatsApp',
+        url: form.whatsapp.trim(),
+      })
     }
 
     if (form.instagram.trim()) {
-      items.push({ type: 'instagram', label: 'Instagram', url: form.instagram.trim() })
+      items.push({
+        type: 'instagram',
+        label: 'Instagram',
+        url: form.instagram.trim(),
+      })
     }
 
     if (form.googleReviews.trim()) {
@@ -125,11 +133,19 @@ export default function DashboardPage() {
     }
 
     if (form.facebook.trim()) {
-      items.push({ type: 'facebook', label: 'Facebook', url: form.facebook.trim() })
+      items.push({
+        type: 'facebook',
+        label: 'Facebook',
+        url: form.facebook.trim(),
+      })
     }
 
     if (form.website.trim()) {
-      items.push({ type: 'website', label: 'Website', url: form.website.trim() })
+      items.push({
+        type: 'website',
+        label: 'Website',
+        url: form.website.trim(),
+      })
     }
 
     return items
@@ -436,36 +452,36 @@ export default function DashboardPage() {
   }
 
   function renderLogo(src: string, alt: string, shape: 'circle' | 'square' = 'circle') {
-  if (!src) return null
+    if (!src) return null
 
-  if (shape === 'square') {
+    if (shape === 'square') {
+      return (
+        <div className="mb-4 h-24 w-24 overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+          <Image
+            src={src}
+            alt={alt}
+            width={96}
+            height={96}
+            className="h-full w-full rounded-2xl object-cover"
+            unoptimized
+          />
+        </div>
+      )
+    }
+
     return (
-      <div className="mb-4 h-24 w-24 overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+      <div className="mb-4 h-24 w-24 overflow-hidden rounded-full bg-white p-1 shadow-md">
         <Image
           src={src}
           alt={alt}
           width={96}
           height={96}
-          className="h-full w-full rounded-2xl object-cover"
+          className="h-full w-full rounded-full object-cover"
           unoptimized
         />
       </div>
     )
   }
-
-  return (
-    <div className="mb-4 h-24 w-24 overflow-hidden rounded-full bg-white p-1 shadow-md">
-      <Image
-        src={src}
-        alt={alt}
-        width={96}
-        height={96}
-        className="h-full w-full rounded-full object-cover"
-        unoptimized
-      />
-    </div>
-  )
-}
 
   function renderPreviewCard() {
     const hasLogo = Boolean(form.logoUrl)
@@ -484,7 +500,6 @@ export default function DashboardPage() {
         <div className="flex min-h-[430px] flex-col items-center rounded-[20px] border border-[var(--border)] bg-[#faf6f1] px-5 py-6 text-center text-[var(--text)]">
           {hasLogo ? (
             renderLogo(form.logoUrl, 'Business logo', 'circle')
-            
           ) : (
             <div className="mb-4 h-16 w-16 rounded-full bg-[var(--border)]" />
           )}
@@ -515,9 +530,7 @@ export default function DashboardPage() {
       return (
         <div className="flex min-h-[430px] flex-col items-center rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-5 py-6 text-center text-[var(--text)] shadow-lg">
           {hasLogo ? (
-            
             renderLogo(form.logoUrl, 'Business logo', 'square')
-            
           ) : (
             <div className="mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
@@ -562,7 +575,10 @@ export default function DashboardPage() {
 
         <div className="mt-8 w-full space-y-3">
           {previewLinks.map((link) => (
-            <div key={link.type} className="rounded-full bg-white/10 px-4 py-3 text-sm">
+            <div
+              key={link.type}
+              className="rounded-full bg-white/10 px-4 py-3 text-sm"
+            >
               {link.label}
             </div>
           ))}
@@ -584,19 +600,30 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-4 text-white sm:flex-row sm:items-center sm:justify-between">
           <div className="text-center sm:text-left">
-            <h1 className="text-3xl font-bold sm:text-4xl">NFC Link Hub Builder</h1>
+            <h1 className="text-3xl font-bold sm:text-4xl">
+              NFC Link Hub Builder
+            </h1>
             <p className="mt-2 text-sm text-white/80 sm:text-base">
               Create simple landing pages for your NFC tags
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[var(--text)]"
-          >
-            Logout
-          </button>
+          <div className="flex flex-wrap justify-center gap-2 sm:justify-end">
+            <Link
+              href="/ai-builder"
+              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[var(--text)]"
+            >
+              AI Builder
+            </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[var(--text)]"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.7fr_0.9fr]">
@@ -725,7 +752,10 @@ export default function DashboardPage() {
                       onChange={(e) => updateField('isPublished', e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <label htmlFor="publish-toggle" className="text-sm font-medium text-[var(--text)]">
+                    <label
+                      htmlFor="publish-toggle"
+                      className="text-sm font-medium text-[var(--text)]"
+                    >
                       Publish this page
                     </label>
                   </div>
@@ -743,19 +773,23 @@ export default function DashboardPage() {
                     />
 
                     {uploadingLogo ? (
-                      <p className="mt-2 text-xs text-[var(--mocha)]">Uploading...</p>
+                      <p className="mt-2 text-xs text-[var(--mocha)]">
+                        Uploading...
+                      </p>
                     ) : null}
 
                     {form.logoUrl ? (
                       <div className="mt-4 flex items-center gap-3">
-                        <Image
-                          src={form.logoUrl}
-                          alt="Uploaded logo"
-                          width={56}
-                          height={56}
-                          className="h-14 w-14 rounded-full border border-[var(--border)] object-cover"
-                          unoptimized
-                        />
+                        <div className="h-14 w-14 overflow-hidden rounded-full bg-white p-1 shadow-sm">
+                          <Image
+                            src={form.logoUrl}
+                            alt="Uploaded logo"
+                            width={56}
+                            height={56}
+                            className="h-full w-full rounded-full object-cover"
+                            unoptimized
+                          />
+                        </div>
                         <p className="text-xs text-green-700">Logo uploaded</p>
                       </div>
                     ) : null}
@@ -804,8 +838,13 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {message ? <p className="text-sm font-medium text-green-700">{message}</p> : null}
-                  {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+                  {message ? (
+                    <p className="text-sm font-medium text-green-700">{message}</p>
+                  ) : null}
+
+                  {error ? (
+                    <p className="text-sm font-medium text-red-700">{error}</p>
+                  ) : null}
 
                   <button
                     type="submit"
@@ -838,8 +877,17 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                {message ? <p className="mb-4 text-sm font-medium text-green-700">{message}</p> : null}
-                {error ? <p className="mb-4 text-sm font-medium text-red-700">{error}</p> : null}
+                {message ? (
+                  <p className="mb-4 text-sm font-medium text-green-700">
+                    {message}
+                  </p>
+                ) : null}
+
+                {error ? (
+                  <p className="mb-4 text-sm font-medium text-red-700">
+                    {error}
+                  </p>
+                ) : null}
 
                 {loadingPages ? (
                   <p className="text-sm text-[var(--mocha)]/70">Loading pages...</p>

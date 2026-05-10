@@ -202,9 +202,7 @@ export default function FlyerPage({ params }: Props) {
                   digital page. No app is needed.
                 </p>
 
-                <div className="mx-auto mt-6 max-w-xs rounded-2xl bg-white px-5 py-4 text-sm font-semibold text-[#2b211b] shadow-sm">
-                  TAP HERE
-                </div>
+                
               </div>
 
               {/* QR Backup */}
