@@ -128,20 +128,37 @@ export default function PublicLandingPage({ params }: Props) {
   const safeBusiness = business
   const hasLogo = Boolean(safeBusiness.logoUrl)
 
-  function renderLogo(className: string, width = 84, height = 84) {
-    if (!safeBusiness.logoUrl) return null
+  function renderLogo(shape: 'circle' | 'square' = 'circle') {
+  if (!safeBusiness.logoUrl) return null
 
+  if (shape === 'square') {
     return (
+      <div className="mx-auto mb-4 h-28 w-28 overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+        <Image
+          src={safeBusiness.logoUrl}
+          alt={`${safeBusiness.name} logo`}
+          width={112}
+          height={112}
+          className="h-full w-full rounded-2xl object-cover"
+          unoptimized
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full bg-white p-1 shadow-md">
       <Image
         src={safeBusiness.logoUrl}
         alt={`${safeBusiness.name} logo`}
-        width={width}
-        height={height}
-        className={className}
+        width={96}
+        height={96}
+        className="h-full w-full rounded-full object-cover"
         unoptimized
       />
-    )
-  }
+    </div>
+  )
+}
 
   function renderLinks(linkClassName: string) {
     if (safeBusiness.links.length === 0) {
@@ -171,9 +188,7 @@ export default function PublicLandingPage({ params }: Props) {
       return (
         <div className="rounded-[24px] border border-[var(--border)] bg-[#faf6f1] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
-            renderLogo(
-              'mx-auto mb-4 h-[84px] w-[84px] rounded-full border border-[var(--border)] object-cover'
-            )
+            renderLogo('circle')
           ) : (
             <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-[var(--border)]" />
           )}
@@ -197,11 +212,7 @@ export default function PublicLandingPage({ params }: Props) {
       return (
         <div className="rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
           {hasLogo ? (
-            renderLogo(
-              'mx-auto mb-4 h-[88px] w-[88px] rounded-2xl border border-white/60 object-cover shadow',
-              88,
-              88
-            )
+            renderLogo('square')
           ) : (
             <div className="mx-auto mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
@@ -224,9 +235,7 @@ export default function PublicLandingPage({ params }: Props) {
     return (
       <div className="rounded-[24px] bg-[linear-gradient(180deg,#3d2b1f_0%,#1f1813_100%)] px-6 py-8 text-center text-white shadow-2xl">
         {hasLogo ? (
-          renderLogo(
-            'mx-auto mb-4 h-[84px] w-[84px] rounded-full border border-white/20 object-cover'
-          )
+          renderLogo('circle')
         ) : (
           <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/10" />
         )}

@@ -24,6 +24,7 @@ type Business = {
 
 export default function FlyerPage({ params }: Props) {
   const { slug } = use(params)
+
   const flyerRef = useRef<HTMLDivElement | null>(null)
 
   const [business, setBusiness] = useState<Business | null>(null)
@@ -33,7 +34,11 @@ export default function FlyerPage({ params }: Props) {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const q = query(collection(db, 'businesses'), where('slug', '==', slug))
+        const q = query(
+          collection(db, 'businesses'),
+          where('slug', '==', slug)
+        )
+
         const snapshot = await getDocs(q)
 
         if (snapshot.empty) {
@@ -79,26 +84,30 @@ export default function FlyerPage({ params }: Props) {
     const link = document.createElement('a')
     link.href = image
     link.download = `${business.slug}-nfc-flyer.png`
+
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
 
     setMessage('Flyer downloaded successfully.')
-    setTimeout(() => setMessage(''), 2500)
+
+    setTimeout(() => {
+      setMessage('')
+    }, 2500)
   }
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p>Loading flyer...</p>
+      <main className="flex min-h-screen items-center justify-center bg-[#f5efe8]">
+        <p className="text-sm text-[#8f6d4e]">Loading flyer...</p>
       </main>
     )
   }
 
   if (!business) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p>Business not found.</p>
+      <main className="flex min-h-screen items-center justify-center bg-[#f5efe8]">
+        <p className="text-sm text-[#8f6d4e]">Business not found.</p>
       </main>
     )
   }
@@ -111,6 +120,7 @@ export default function FlyerPage({ params }: Props) {
         <div className="mb-6 flex flex-col gap-3 text-white sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Flyer Generator</h1>
+
             <p className="mt-1 text-sm text-white/80">
               Download a printable NFC-first flyer.
             </p>
@@ -146,56 +156,65 @@ export default function FlyerPage({ params }: Props) {
             className="w-full max-w-[720px] rounded-[36px] bg-[#f5efe8] p-8 shadow-2xl sm:p-12"
           >
             <div className="rounded-[30px] border border-[#d8c7b8] bg-white p-8 text-center shadow-xl sm:p-12">
-              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#efe3d6]">
+              {/* Logo */}
+              <div className="mx-auto mb-8 flex h-36 w-36 items-center justify-center overflow-hidden rounded-[32px] bg-white p-3 shadow-xl">
                 {business.logoUrl ? (
                   <Image
                     src={business.logoUrl}
                     alt={`${business.name} logo`}
-                    width={96}
-                    height={96}
-                    className="h-full w-full object-cover"
+                    width={144}
+                    height={144}
+                    className="h-full w-full rounded-[24px] object-cover"
                     unoptimized
                   />
                 ) : (
-                  <span className="text-3xl font-bold text-[#8f6d4e]">
+                  <span className="text-5xl font-bold text-[#8f6d4e]">
                     {business.name.charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
 
-             
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-[#8f6d4e]">
+                NFC Enabled
+              </p>
 
               <h2 className="text-4xl font-bold text-[#2b211b] sm:text-5xl">
                 {business.name}
               </h2>
 
               <p className="mx-auto mt-4 max-w-md text-base leading-7 text-[#8f6d4e]">
-                {business.tagline || 'Tap the NFC tag to connect with us instantly.'}
+                {business.tagline ||
+                  'Tap the NFC tag to connect with us instantly.'}
               </p>
 
-              {/* Main NFC section */}
+              {/* NFC Main Section */}
               <div className="my-10 rounded-[32px] border-2 border-dashed border-[#b8926b] bg-[#f5efe8] px-6 py-10">
                 <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[#2b211b] text-white shadow-lg">
-                  <span className="text-4xl"></span>
+                  <span className="text-4xl">📡</span>
                 </div>
 
                 <h3 className="text-3xl font-bold text-[#2b211b]">
-                  Tap Here
+                  Tap the NFC tag
                 </h3>
 
                 <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#8f6d4e]">
-                  Place your phone close to the NFC tag to open our digital page.
-                  No app is needed.
+                  Place your phone close to the NFC tag to instantly open our
+                  digital page. No app is needed.
                 </p>
 
-                
+                <div className="mx-auto mt-6 max-w-xs rounded-2xl bg-white px-5 py-4 text-sm font-semibold text-[#2b211b] shadow-sm">
+                  TAP HERE
+                </div>
               </div>
 
-              {/* Backup QR section */}
-              <div className="rounded-[24px] bg-white px-5 py-5 shadow-sm">
+              {/* QR Backup */}
+              <div className="rounded-[24px] bg-[#faf6f1] px-5 py-6 shadow-sm">
+                <p className="mb-4 text-sm font-semibold text-[#8f6d4e]">
+                  QR code backup
+                </p>
 
                 <div className="flex justify-center">
-                  <div className="rounded-2xl bg-white p-3 shadow-md">
+                  <div className="rounded-2xl bg-white p-4 shadow-md">
                     <QRCodeCanvas
                       value={publicUrl}
                       size={140}
@@ -212,7 +231,7 @@ export default function FlyerPage({ params }: Props) {
               </div>
 
               <p className="mt-8 text-sm font-medium text-[#2b211b]">
-                Tap, scan, connect.
+                Tap. Connect. Engage.
               </p>
             </div>
           </div>

@@ -18,7 +18,8 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { auth, db } from '@/lib/firebase'
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { auth, db, storage } from '@/lib/firebase'
 
 type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
 
@@ -54,6 +55,8 @@ type Business = {
   clicks: number
 }
 
+const SITE_URL = 'https://nfc-link-hub-8yji.vercel.app'
+
 const initialForm: FormData = {
   businessName: '',
   tagline: '',
@@ -87,6 +90,7 @@ export default function DashboardPage() {
   const [savedBusinesses, setSavedBusinesses] = useState<Business[]>([])
 
   const [loading, setLoading] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [loadingPages, setLoadingPages] = useState(false)
   const [loadingEdit, setLoadingEdit] = useState(false)
   const [deletingId, setDeletingId] = useState('')
@@ -105,19 +109,11 @@ export default function DashboardPage() {
     const items: LinkItem[] = []
 
     if (form.whatsapp.trim()) {
-      items.push({
-        type: 'whatsapp',
-        label: 'WhatsApp',
-        url: form.whatsapp.trim(),
-      })
+      items.push({ type: 'whatsapp', label: 'WhatsApp', url: form.whatsapp.trim() })
     }
 
     if (form.instagram.trim()) {
-      items.push({
-        type: 'instagram',
-        label: 'Instagram',
-        url: form.instagram.trim(),
-      })
+      items.push({ type: 'instagram', label: 'Instagram', url: form.instagram.trim() })
     }
 
     if (form.googleReviews.trim()) {
@@ -129,19 +125,11 @@ export default function DashboardPage() {
     }
 
     if (form.facebook.trim()) {
-      items.push({
-        type: 'facebook',
-        label: 'Facebook',
-        url: form.facebook.trim(),
-      })
+      items.push({ type: 'facebook', label: 'Facebook', url: form.facebook.trim() })
     }
 
     if (form.website.trim()) {
-      items.push({
-        type: 'website',
-        label: 'Website',
-        url: form.website.trim(),
-      })
+      items.push({ type: 'website', label: 'Website', url: form.website.trim() })
     }
 
     return items
@@ -170,6 +158,38 @@ export default function DashboardPage() {
     setEditingId(null)
     setMessage('')
     setError('')
+  }
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+
+    if (!file || !user) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file.')
+      return
+    }
+
+    try {
+      setUploadingLogo(true)
+      setMessage('Uploading logo...')
+      setError('')
+
+      const safeName = file.name.replace(/\s+/g, '-').toLowerCase()
+      const storageRef = ref(storage, `logos/${user.uid}/${Date.now()}-${safeName}`)
+
+      await uploadBytes(storageRef, file)
+
+      const downloadUrl = await getDownloadURL(storageRef)
+
+      updateField('logoUrl', downloadUrl)
+      setMessage('Logo uploaded successfully.')
+    } catch (err) {
+      console.error(err)
+      setError('Failed to upload logo.')
+    } finally {
+      setUploadingLogo(false)
+    }
   }
 
   async function fetchBusinesses() {
@@ -341,9 +361,7 @@ export default function DashboardPage() {
 
       setSavedBusinesses((prev) => prev.filter((business) => business.id !== id))
 
-      if (editingId === id) {
-        resetForm()
-      }
+      if (editingId === id) resetForm()
 
       setMessage('Page deleted successfully.')
     } catch {
@@ -354,29 +372,13 @@ export default function DashboardPage() {
   }
 
   async function copyPublicLink(slugValue: string) {
-    const fullUrl = `https://nfc-link-hub-8yji.vercel.app/preview/${slugValue}`
+    const fullUrl = `${SITE_URL}/preview/${slugValue}`
 
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(fullUrl)
-      } else {
-        const textArea = document.createElement('textarea')
-        textArea.value = fullUrl
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-9999px'
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        document.execCommand('copy')
-        document.body.removeChild(textArea)
-      }
-
+      await navigator.clipboard.writeText(fullUrl)
       setMessage('Link copied successfully.')
       setError('')
-
-      setTimeout(() => {
-        setMessage('')
-      }, 2500)
+      setTimeout(() => setMessage(''), 2500)
     } catch {
       setError('Failed to copy link.')
     }
@@ -401,10 +403,7 @@ export default function DashboardPage() {
 
     setMessage('QR code downloaded successfully.')
     setError('')
-
-    setTimeout(() => {
-      setMessage('')
-    }, 2500)
+    setTimeout(() => setMessage(''), 2500)
   }
 
   async function togglePublish(business: Business) {
@@ -436,20 +435,37 @@ export default function DashboardPage() {
     router.push('/')
   }
 
-  function renderLogo(src: string, alt: string, className: string) {
-    if (!src) return null
+  function renderLogo(src: string, alt: string, shape: 'circle' | 'square' = 'circle') {
+  if (!src) return null
 
+  if (shape === 'square') {
     return (
+      <div className="mb-4 h-24 w-24 overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+        <Image
+          src={src}
+          alt={alt}
+          width={96}
+          height={96}
+          className="h-full w-full rounded-2xl object-cover"
+          unoptimized
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-4 h-24 w-24 overflow-hidden rounded-full bg-white p-1 shadow-md">
       <Image
         src={src}
         alt={alt}
-        width={80}
-        height={80}
-        className={className}
+        width={96}
+        height={96}
+        className="h-full w-full rounded-full object-cover"
         unoptimized
       />
-    )
-  }
+    </div>
+  )
+}
 
   function renderPreviewCard() {
     const hasLogo = Boolean(form.logoUrl)
@@ -467,11 +483,8 @@ export default function DashboardPage() {
       return (
         <div className="flex min-h-[430px] flex-col items-center rounded-[20px] border border-[var(--border)] bg-[#faf6f1] px-5 py-6 text-center text-[var(--text)]">
           {hasLogo ? (
-            renderLogo(
-              form.logoUrl,
-              'Business logo',
-              'mb-4 h-[72px] w-[72px] rounded-full border border-[var(--border)] object-cover'
-            )
+            renderLogo(form.logoUrl, 'Business logo', 'circle')
+            
           ) : (
             <div className="mb-4 h-16 w-16 rounded-full bg-[var(--border)]" />
           )}
@@ -502,11 +515,9 @@ export default function DashboardPage() {
       return (
         <div className="flex min-h-[430px] flex-col items-center rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-5 py-6 text-center text-[var(--text)] shadow-lg">
           {hasLogo ? (
-            renderLogo(
-              form.logoUrl,
-              'Business logo',
-              'mb-4 h-20 w-20 rounded-2xl border border-white/60 object-cover shadow'
-            )
+            
+            renderLogo(form.logoUrl, 'Business logo', 'square')
+            
           ) : (
             <div className="mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
@@ -536,11 +547,7 @@ export default function DashboardPage() {
     return (
       <div className="flex min-h-[430px] flex-col items-center rounded-[20px] bg-[linear-gradient(180deg,#3d2b1f_0%,#201710_100%)] px-5 py-6 text-center text-white">
         {hasLogo ? (
-          renderLogo(
-            form.logoUrl,
-            'Business logo',
-            'mb-5 h-[72px] w-[72px] rounded-full border border-white/20 object-cover'
-          )
+          renderLogo(form.logoUrl, 'Business logo', 'circle')
         ) : (
           <div className="mb-5 h-16 w-16 rounded-full bg-white/10" />
         )}
@@ -555,10 +562,7 @@ export default function DashboardPage() {
 
         <div className="mt-8 w-full space-y-3">
           {previewLinks.map((link) => (
-            <div
-              key={link.type}
-              className="rounded-full bg-white/10 px-4 py-3 text-sm"
-            >
+            <div key={link.type} className="rounded-full bg-white/10 px-4 py-3 text-sm">
               {link.label}
             </div>
           ))}
@@ -580,9 +584,7 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-col gap-4 text-white sm:flex-row sm:items-center sm:justify-between">
           <div className="text-center sm:text-left">
-            <h1 className="text-3xl font-bold sm:text-4xl">
-              NFC Link Hub Builder
-            </h1>
+            <h1 className="text-3xl font-bold sm:text-4xl">NFC Link Hub Builder</h1>
             <p className="mt-2 text-sm text-white/80 sm:text-base">
               Create simple landing pages for your NFC tags
             </p>
@@ -723,21 +725,41 @@ export default function DashboardPage() {
                       onChange={(e) => updateField('isPublished', e.target.checked)}
                       className="h-4 w-4"
                     />
-                    <label
-                      htmlFor="publish-toggle"
-                      className="text-sm font-medium text-[var(--text)]"
-                    >
+                    <label htmlFor="publish-toggle" className="text-sm font-medium text-[var(--text)]">
                       Publish this page
                     </label>
                   </div>
 
-                  <input
-                    type="url"
-                    value={form.logoUrl}
-                    onChange={(e) => updateField('logoUrl', e.target.value)}
-                    placeholder="Logo URL"
-                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                  />
+                  <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+                    <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                      Upload Logo
+                    </label>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="w-full text-sm text-[var(--mocha)]"
+                    />
+
+                    {uploadingLogo ? (
+                      <p className="mt-2 text-xs text-[var(--mocha)]">Uploading...</p>
+                    ) : null}
+
+                    {form.logoUrl ? (
+                      <div className="mt-4 flex items-center gap-3">
+                        <Image
+                          src={form.logoUrl}
+                          alt="Uploaded logo"
+                          width={56}
+                          height={56}
+                          className="h-14 w-14 rounded-full border border-[var(--border)] object-cover"
+                          unoptimized
+                        />
+                        <p className="text-xs text-green-700">Logo uploaded</p>
+                      </div>
+                    ) : null}
+                  </div>
 
                   <div className="pt-2">
                     <h3 className="mb-3 text-lg font-semibold text-[var(--text)]">
@@ -782,17 +804,12 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {message ? (
-                    <p className="text-sm font-medium text-green-700">{message}</p>
-                  ) : null}
-
-                  {error ? (
-                    <p className="text-sm font-medium text-red-700">{error}</p>
-                  ) : null}
+                  {message ? <p className="text-sm font-medium text-green-700">{message}</p> : null}
+                  {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || uploadingLogo}
                     className="mt-4 w-full rounded-xl bg-[linear-gradient(135deg,#b8926b_0%,#8f6d4e_100%)] px-4 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
                   >
                     {loading
@@ -821,13 +838,8 @@ export default function DashboardPage() {
                   </button>
                 </div>
 
-                {message ? (
-                  <p className="mb-4 text-sm font-medium text-green-700">{message}</p>
-                ) : null}
-
-                {error ? (
-                  <p className="mb-4 text-sm font-medium text-red-700">{error}</p>
-                ) : null}
+                {message ? <p className="mb-4 text-sm font-medium text-green-700">{message}</p> : null}
+                {error ? <p className="mb-4 text-sm font-medium text-red-700">{error}</p> : null}
 
                 {loadingPages ? (
                   <p className="text-sm text-[var(--mocha)]/70">Loading pages...</p>
@@ -838,7 +850,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="space-y-4">
                     {savedBusinesses.map((business) => {
-                      const publicUrl = `https://nfc-link-hub-8yji.vercel.app/preview/${business.slug}`
+                      const publicUrl = `${SITE_URL}/preview/${business.slug}`
 
                       return (
                         <div
