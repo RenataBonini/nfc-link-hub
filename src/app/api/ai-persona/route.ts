@@ -20,16 +20,16 @@ export async function POST(req: Request) {
         {
           role: 'user',
           content: `
-Business type: ${body.businessType}
-Target audience: ${body.targetAudience}
-Customer age: ${body.customerAge}
-Brand style: ${body.brandStyle}
-Main goal: ${body.mainGoal}
-Primary platform: ${body.primaryPlatform}
-Tone: ${body.tone}
+            Business type: ${body.businessType}
+            Target audience: ${body.targetAudience}
+            Customer age: ${body.customerAge}
+            Brand style: ${body.brandStyle}
+            Main goal: ${body.mainGoal}
+            Primary platform: ${body.primaryPlatform}
+            Tone: ${body.tone}
 
-Recommend the best landing page strategy.
-          `,
+            Recommend the best landing page strategy.
+                    `,
         },
       ],
       text: {
