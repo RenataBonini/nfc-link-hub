@@ -13,13 +13,27 @@ type Props = {
   }>
 }
 
+type ColorPalette = {
+  background: string
+  accent: string
+}
+
 type Business = {
   id: string
   name: string
   tagline: string
+  flyerHeadline: string
+  flyerSubtext: string
+  flyerCallout: string
+  colorPalette: ColorPalette
   slug: string
   logoUrl: string
   isPublished: boolean
+}
+
+const defaultColorPalette: ColorPalette = {
+  background: '#f5efe8',
+  accent: '#b8926b',
 }
 
 export default function FlyerPage({ params }: Props) {
@@ -49,10 +63,25 @@ export default function FlyerPage({ params }: Props) {
         const docSnap = snapshot.docs[0]
         const data = docSnap.data()
 
+        const colorPalette: ColorPalette = {
+          background:
+            data.colorPalette?.background ||
+            data.colorPalette?.primary ||
+            defaultColorPalette.background,
+          accent:
+            data.colorPalette?.accent ||
+            data.colorPalette?.secondary ||
+            defaultColorPalette.accent,
+        }
+
         setBusiness({
           id: docSnap.id,
           name: data.name || '',
           tagline: data.tagline || '',
+          flyerHeadline: data.flyerHeadline || '',
+          flyerSubtext: data.flyerSubtext || '',
+          flyerCallout: data.flyerCallout || '',
+          colorPalette,
           slug: data.slug || '',
           logoUrl: data.logoUrl || '',
           isPublished: Boolean(data.isPublished),
@@ -75,7 +104,7 @@ export default function FlyerPage({ params }: Props) {
 
     const canvas = await html2canvas(flyerRef.current, {
       scale: 2,
-      backgroundColor: '#f5efe8',
+      backgroundColor: business.colorPalette.background,
       useCORS: true,
     })
 
@@ -112,7 +141,27 @@ export default function FlyerPage({ params }: Props) {
     )
   }
 
+  if (!business.isPublished) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#f5efe8]">
+        <p className="text-sm text-[#8f6d4e]">
+          This page is not published yet.
+        </p>
+      </main>
+    )
+  }
+
   const publicUrl = `https://nfc-link-hub-8yji.vercel.app/preview/${business.slug}`
+
+  const flyerHeadline = business.flyerHeadline || business.name
+
+  const flyerSubtext =
+    business.flyerSubtext ||
+    business.tagline ||
+    'Tap the NFC tag to connect with us instantly.'
+
+  const flyerCallout =
+    business.flyerCallout || 'Tap your phone on the NFC tag'
 
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#b8926b_0%,#8f6d4e_100%)] px-4 py-8">
@@ -153,61 +202,91 @@ export default function FlyerPage({ params }: Props) {
         <div className="flex justify-center">
           <div
             ref={flyerRef}
-            className="w-full max-w-[720px] rounded-[36px] bg-[#f5efe8] p-8 shadow-2xl sm:p-12"
+            className="w-full max-w-[720px] rounded-[36px] p-8 shadow-2xl sm:p-12"
+            style={{
+              background: `linear-gradient(135deg, ${business.colorPalette.background} 0%, ${business.colorPalette.accent} 100%)`,
+            }}
           >
             <div className="rounded-[30px] border border-[#d8c7b8] bg-white p-8 text-center shadow-xl sm:p-12">
               {/* Logo */}
-              <div className="mx-auto mb-8 flex h-36 w-36 items-center justify-center overflow-hidden rounded-[32px] bg-white p-3 shadow-xl">
+              <div className="mx-auto mb-8 flex h-40 w-56 items-center justify-center rounded-[32px] bg-white p-4 shadow-xl">
                 {business.logoUrl ? (
                   <Image
                     src={business.logoUrl}
                     alt={`${business.name} logo`}
-                    width={144}
-                    height={144}
-                    className="h-full w-full rounded-[24px] object-cover"
+                    width={220}
+                    height={140}
+                    className="h-full w-full object-contain"
                     unoptimized
                   />
                 ) : (
-                  <span className="text-5xl font-bold text-[#8f6d4e]">
+                  <span
+                    className="text-5xl font-bold"
+                    style={{ color: business.colorPalette.accent }}
+                  >
                     {business.name.charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
 
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-[#8f6d4e]">
+              <p
+                className="mb-3 text-xs font-semibold uppercase tracking-[0.35em]"
+                style={{ color: business.colorPalette.accent }}
+              >
                 NFC Enabled
               </p>
 
               <h2 className="text-4xl font-bold text-[#2b211b] sm:text-5xl">
-                {business.name}
+                {flyerHeadline}
               </h2>
 
-              <p className="mx-auto mt-4 max-w-md text-base leading-7 text-[#8f6d4e]">
-                {business.tagline ||
-                  'Tap the NFC tag to connect with us instantly.'}
+              <p
+                className="mx-auto mt-4 max-w-md text-base leading-7"
+                style={{ color: business.colorPalette.accent }}
+              >
+                {flyerSubtext}
               </p>
 
               {/* NFC Main Section */}
-              <div className="my-10 rounded-[32px] border-2 border-dashed border-[#b8926b] bg-[#f5efe8] px-6 py-10">
-                <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[#2b211b] text-white shadow-lg">
+              <div
+                className="my-10 rounded-[32px] border-2 border-dashed px-6 py-10"
+                style={{
+                  borderColor: business.colorPalette.accent,
+                  backgroundColor: business.colorPalette.background,
+                }}
+              >
+                <div
+                  className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full text-white shadow-lg"
+                  style={{ backgroundColor: '#2b211b' }}
+                >
                   <span className="text-4xl">📡</span>
                 </div>
 
                 <h3 className="text-3xl font-bold text-[#2b211b]">
-                  Tap the NFC tag
+                  {flyerCallout}
                 </h3>
 
-                <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-[#8f6d4e]">
+                <p
+                  className="mx-auto mt-3 max-w-sm text-sm leading-6"
+                  style={{ color: business.colorPalette.accent }}
+                >
                   Place your phone close to the NFC tag to instantly open our
                   digital page. No app is needed.
                 </p>
-
-                
               </div>
 
               {/* QR Backup */}
-              <div className="rounded-[24px] bg-[#faf6f1] px-5 py-6 shadow-sm">
-                <p className="mb-4 text-sm font-semibold text-[#8f6d4e]">
+              <div
+                className="rounded-[24px] border px-5 py-6 shadow-sm"
+                style={{
+                  borderColor: business.colorPalette.accent,
+                  backgroundColor: '#faf6f1',
+                }}
+              >
+                <p
+                  className="mb-4 text-sm font-semibold"
+                  style={{ color: business.colorPalette.accent }}
+                >
                   QR code backup
                 </p>
 
@@ -223,7 +302,10 @@ export default function FlyerPage({ params }: Props) {
                   </div>
                 </div>
 
-                <p className="mx-auto mt-4 max-w-xs text-xs leading-5 text-[#8f6d4e]">
+                <p
+                  className="mx-auto mt-4 max-w-xs text-xs leading-5"
+                  style={{ color: business.colorPalette.accent }}
+                >
                   If NFC is unavailable, scan this QR code instead.
                 </p>
               </div>

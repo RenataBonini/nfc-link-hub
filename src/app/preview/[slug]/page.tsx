@@ -25,15 +25,28 @@ type LinkItem = {
   url: string
 }
 
+type ColorPalette = {
+  background: string
+  accent: string
+}
+
 type Business = {
   id: string
   name: string
   tagline: string
+  pageHeadline: string
+  pageDescription: string
+  colorPalette: ColorPalette
   slug: string
   template: 'classic-dark' | 'minimal-light' | 'warm-card'
   logoUrl: string
   isPublished: boolean
   links: LinkItem[]
+}
+
+const defaultColorPalette: ColorPalette = {
+  background: '#f5efe8',
+  accent: '#b8926b',
 }
 
 export default function PublicLandingPage({ params }: Props) {
@@ -45,11 +58,7 @@ export default function PublicLandingPage({ params }: Props) {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const q = query(
-          collection(db, 'businesses'),
-          where('slug', '==', slug)
-        )
-
+        const q = query(collection(db, 'businesses'), where('slug', '==', slug))
         const snapshot = await getDocs(q)
 
         if (snapshot.empty) {
@@ -60,10 +69,24 @@ export default function PublicLandingPage({ params }: Props) {
         const docSnap = snapshot.docs[0]
         const data = docSnap.data()
 
+        const colorPalette: ColorPalette = {
+          background:
+            data.colorPalette?.background ||
+            data.colorPalette?.primary ||
+            defaultColorPalette.background,
+          accent:
+            data.colorPalette?.accent ||
+            data.colorPalette?.secondary ||
+            defaultColorPalette.accent,
+        }
+
         const loadedBusiness: Business = {
           id: docSnap.id,
           name: data.name || '',
           tagline: data.tagline || '',
+          pageHeadline: data.pageHeadline || '',
+          pageDescription: data.pageDescription || '',
+          colorPalette,
           slug: data.slug || '',
           template: data.template || 'classic-dark',
           logoUrl: data.logoUrl || '',
@@ -127,19 +150,24 @@ export default function PublicLandingPage({ params }: Props) {
 
   const safeBusiness = business
   const hasLogo = Boolean(safeBusiness.logoUrl)
+  const headline = safeBusiness.pageHeadline || safeBusiness.name
+  const description =
+    safeBusiness.pageDescription ||
+    safeBusiness.tagline ||
+    'Connect with us instantly'
 
   function renderLogo(shape: 'circle' | 'square' = 'circle') {
   if (!safeBusiness.logoUrl) return null
 
   if (shape === 'square') {
     return (
-      <div className="mx-auto mb-4 h-28 w-28 overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+      <div className="mx-auto mb-4 flex h-32 w-52 items-center justify-center rounded-[28px] bg-white p-4 shadow-xl">
         <Image
           src={safeBusiness.logoUrl}
           alt={`${safeBusiness.name} logo`}
-          width={112}
-          height={112}
-          className="h-full w-full rounded-2xl object-cover"
+          width={180}
+          height={120}
+          className="h-full w-full object-contain"
           unoptimized
         />
       </div>
@@ -147,13 +175,13 @@ export default function PublicLandingPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full bg-white p-1 shadow-md">
+    <div className="mx-auto mb-4 flex h-28 w-44 items-center justify-center rounded-3xl bg-white p-3 shadow-md">
       <Image
         src={safeBusiness.logoUrl}
         alt={`${safeBusiness.name} logo`}
-        width={96}
-        height={96}
-        className="h-full w-full rounded-full object-cover"
+        width={160}
+        height={100}
+        className="h-full w-full object-contain"
         unoptimized
       />
     </div>
@@ -162,11 +190,7 @@ export default function PublicLandingPage({ params }: Props) {
 
   function renderLinks(linkClassName: string) {
     if (safeBusiness.links.length === 0) {
-      return (
-        <p className="text-sm opacity-70">
-          No links have been added yet.
-        </p>
-      )
+      return <p className="text-sm opacity-70">No links have been added yet.</p>
     }
 
     return safeBusiness.links.map((link) => (
@@ -186,17 +210,20 @@ export default function PublicLandingPage({ params }: Props) {
   function renderCard() {
     if (safeBusiness.template === 'minimal-light') {
       return (
-        <div className="rounded-[24px] border border-[var(--border)] bg-[#faf6f1] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
+        <div
+          className="rounded-[24px] border border-[var(--border)] px-6 py-8 text-center text-[var(--text)] shadow-2xl"
+          style={{ backgroundColor: safeBusiness.colorPalette.background }}
+        >
           {hasLogo ? (
             renderLogo('circle')
           ) : (
             <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-[var(--border)]" />
           )}
 
-          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
+          <h1 className="text-2xl font-bold">{headline}</h1>
 
           <p className="mt-2 text-sm text-[var(--mocha)]/70">
-            {safeBusiness.tagline || 'Connect with us instantly'}
+            {description}
           </p>
 
           <div className="mt-8 space-y-3">
@@ -210,17 +237,22 @@ export default function PublicLandingPage({ params }: Props) {
 
     if (safeBusiness.template === 'warm-card') {
       return (
-        <div className="rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-6 py-8 text-center text-[var(--text)] shadow-2xl">
+        <div
+          className="rounded-[28px] px-6 py-8 text-center text-[var(--text)] shadow-2xl"
+          style={{
+            background: `linear-gradient(180deg, ${safeBusiness.colorPalette.background} 0%, ${safeBusiness.colorPalette.accent} 100%)`,
+          }}
+        >
           {hasLogo ? (
             renderLogo('square')
           ) : (
             <div className="mx-auto mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
 
-          <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
+          <h1 className="text-2xl font-bold">{headline}</h1>
 
           <p className="mt-2 text-sm text-[var(--mocha)]/80">
-            {safeBusiness.tagline || 'Connect with us instantly'}
+            {description}
           </p>
 
           <div className="mt-8 space-y-3">
@@ -233,17 +265,22 @@ export default function PublicLandingPage({ params }: Props) {
     }
 
     return (
-      <div className="rounded-[24px] bg-[linear-gradient(180deg,#3d2b1f_0%,#1f1813_100%)] px-6 py-8 text-center text-white shadow-2xl">
+      <div
+        className="rounded-[24px] px-6 py-8 text-center text-white shadow-2xl"
+        style={{
+          background: `linear-gradient(180deg, ${safeBusiness.colorPalette.accent} 0%, #1f1813 100%)`,
+        }}
+      >
         {hasLogo ? (
           renderLogo('circle')
         ) : (
           <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/10" />
         )}
 
-        <h1 className="text-2xl font-bold">{safeBusiness.name}</h1>
+        <h1 className="text-2xl font-bold">{headline}</h1>
 
         <p className="mt-2 text-sm text-white/70">
-          {safeBusiness.tagline || 'Connect with us instantly'}
+          {description}
         </p>
 
         <div className="mt-8 space-y-3">
