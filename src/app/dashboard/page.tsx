@@ -29,9 +29,20 @@ type LinkItem = {
   url: string
 }
 
+type ColorPalette = {
+  background: string
+  accent: string
+}
+
 type FormData = {
   businessName: string
   tagline: string
+  pageHeadline: string
+  pageDescription: string
+  flyerHeadline: string
+  flyerSubtext: string
+  flyerCallout: string
+  colorPalette: ColorPalette
   template: TemplateType
   logoUrl: string
   isPublished: boolean
@@ -47,6 +58,12 @@ type Business = {
   ownerId: string
   name: string
   tagline: string
+  pageHeadline: string
+  pageDescription: string
+  flyerHeadline: string
+  flyerSubtext: string
+  flyerCallout: string
+  colorPalette: ColorPalette
   slug: string
   template: TemplateType
   logoUrl: string
@@ -57,9 +74,20 @@ type Business = {
 
 const SITE_URL = 'https://nfc-link-hub-8yji.vercel.app'
 
+const defaultColorPalette: ColorPalette = {
+  background: '#f5efe8',
+  accent: '#b8926b',
+}
+
 const initialForm: FormData = {
   businessName: '',
   tagline: '',
+  pageHeadline: '',
+  pageDescription: '',
+  flyerHeadline: '',
+  flyerSubtext: '',
+  flyerCallout: '',
+  colorPalette: defaultColorPalette,
   template: 'classic-dark',
   logoUrl: '',
   isPublished: false,
@@ -77,6 +105,10 @@ function slugify(value: string) {
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
+}
+
+function isTemplate(value: unknown): value is TemplateType {
+  return value === 'classic-dark' || value === 'minimal-light' || value === 'warm-card'
 }
 
 export default function DashboardPage() {
@@ -165,8 +197,56 @@ export default function DashboardPage() {
     return () => unsubscribe()
   }, [router])
 
+  useEffect(() => {
+  const savedRecommendation = localStorage.getItem('aiRecommendation')
+
+  if (!savedRecommendation) return
+
+  try {
+    const parsed = JSON.parse(savedRecommendation)
+
+    window.setTimeout(() => {
+      setForm((prev) => ({
+        ...prev,
+        tagline: parsed.tagline || prev.tagline,
+        pageHeadline: parsed.pageHeadline || prev.pageHeadline,
+        pageDescription: parsed.pageDescription || prev.pageDescription,
+        flyerHeadline: parsed.flyerHeadline || prev.flyerHeadline,
+        flyerSubtext: parsed.flyerSubtext || prev.flyerSubtext,
+        flyerCallout: parsed.flyerCallout || prev.flyerCallout,
+        template: isTemplate(parsed.template) ? parsed.template : prev.template,
+        colorPalette: {
+          background:
+            parsed.colorPalette?.background ||
+            parsed.colorPalette?.primary ||
+            prev.colorPalette.background,
+          accent:
+            parsed.colorPalette?.accent ||
+            parsed.colorPalette?.secondary ||
+            prev.colorPalette.accent,
+        },
+      }))
+
+      setMessage('AI recommendation applied. Add your business name, logo, and links.')
+      localStorage.removeItem('aiRecommendation')
+    }, 0)
+  } catch (err) {
+    console.error(err)
+  }
+}, [])
+
   function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function updateColorField(key: keyof ColorPalette, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      colorPalette: {
+        ...prev.colorPalette,
+        [key]: value,
+      },
+    }))
   }
 
   function resetForm() {
@@ -230,6 +310,12 @@ export default function DashboardPage() {
           ownerId: data.ownerId,
           name: data.name || '',
           tagline: data.tagline || '',
+          pageHeadline: data.pageHeadline || '',
+          pageDescription: data.pageDescription || '',
+          flyerHeadline: data.flyerHeadline || '',
+          flyerSubtext: data.flyerSubtext || '',
+          flyerCallout: data.flyerCallout || '',
+          colorPalette: data.colorPalette || defaultColorPalette,
           slug: data.slug || '',
           template: data.template || 'classic-dark',
           logoUrl: data.logoUrl || '',
@@ -285,6 +371,12 @@ export default function DashboardPage() {
         ownerId: user.uid,
         name: form.businessName.trim(),
         tagline: form.tagline.trim(),
+        pageHeadline: form.pageHeadline.trim(),
+        pageDescription: form.pageDescription.trim(),
+        flyerHeadline: form.flyerHeadline.trim(),
+        flyerSubtext: form.flyerSubtext.trim(),
+        flyerCallout: form.flyerCallout.trim(),
+        colorPalette: form.colorPalette,
         slug,
         template: form.template,
         logoUrl: form.logoUrl.trim(),
@@ -335,6 +427,12 @@ export default function DashboardPage() {
       const nextForm: FormData = {
         businessName: data.name || '',
         tagline: data.tagline || '',
+        pageHeadline: data.pageHeadline || '',
+        pageDescription: data.pageDescription || '',
+        flyerHeadline: data.flyerHeadline || '',
+        flyerSubtext: data.flyerSubtext || '',
+        flyerCallout: data.flyerCallout || '',
+        colorPalette: data.colorPalette || defaultColorPalette,
         template: data.template || 'classic-dark',
         logoUrl: data.logoUrl || '',
         isPublished: Boolean(data.isPublished),
@@ -374,7 +472,6 @@ export default function DashboardPage() {
 
     try {
       await deleteDoc(doc(db, 'businesses', id))
-
       setSavedBusinesses((prev) => prev.filter((business) => business.id !== id))
 
       if (editingId === id) resetForm()
@@ -485,6 +582,8 @@ export default function DashboardPage() {
 
   function renderPreviewCard() {
     const hasLogo = Boolean(form.logoUrl)
+    const headline = form.pageHeadline || form.businessName || 'Business Name'
+    const description = form.pageDescription || form.tagline || 'Tap to connect'
 
     const previewLinks =
       links.length > 0
@@ -492,25 +591,23 @@ export default function DashboardPage() {
         : [
             { type: 'whatsapp', label: 'WhatsApp', url: '#' },
             { type: 'instagram', label: 'Instagram', url: '#' },
-            { type: 'google', label: 'Google Reviews', url: '#' },
+            { type: 'reviews', label: 'Google Reviews', url: '#' },
           ]
 
     if (form.template === 'minimal-light') {
       return (
-        <div className="flex min-h-[430px] flex-col items-center rounded-[20px] border border-[var(--border)] bg-[#faf6f1] px-5 py-6 text-center text-[var(--text)]">
+        <div
+          className="flex min-h-[430px] flex-col items-center rounded-[20px] border border-[var(--border)] px-5 py-6 text-center text-[var(--text)]"
+          style={{ backgroundColor: form.colorPalette.background }}
+        >
           {hasLogo ? (
             renderLogo(form.logoUrl, 'Business logo', 'circle')
           ) : (
             <div className="mb-4 h-16 w-16 rounded-full bg-[var(--border)]" />
           )}
 
-          <h3 className="text-lg font-semibold">
-            {form.businessName || 'Business Name'}
-          </h3>
-
-          <p className="mt-1 text-sm text-[var(--mocha)]/70">
-            {form.tagline || 'Tap to connect'}
-          </p>
+          <h3 className="text-lg font-semibold">{headline}</h3>
+          <p className="mt-1 text-sm text-[var(--mocha)]/70">{description}</p>
 
           <div className="mt-8 w-full space-y-3">
             {previewLinks.map((link) => (
@@ -528,20 +625,20 @@ export default function DashboardPage() {
 
     if (form.template === 'warm-card') {
       return (
-        <div className="flex min-h-[430px] flex-col items-center rounded-[28px] bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)] px-5 py-6 text-center text-[var(--text)] shadow-lg">
+        <div
+          className="flex min-h-[430px] flex-col items-center rounded-[28px] px-5 py-6 text-center text-[var(--text)] shadow-lg"
+          style={{
+            background: `linear-gradient(180deg, ${form.colorPalette.background} 0%, ${form.colorPalette.accent} 100%)`,
+          }}
+        >
           {hasLogo ? (
             renderLogo(form.logoUrl, 'Business logo', 'square')
           ) : (
             <div className="mb-4 h-20 w-20 rounded-2xl bg-white/50" />
           )}
 
-          <h3 className="text-xl font-bold">
-            {form.businessName || 'Business Name'}
-          </h3>
-
-          <p className="mt-1 text-sm text-[var(--mocha)]/80">
-            {form.tagline || 'Tap to connect'}
-          </p>
+          <h3 className="text-xl font-bold">{headline}</h3>
+          <p className="mt-1 text-sm text-[var(--mocha)]/80">{description}</p>
 
           <div className="mt-8 w-full space-y-3">
             {previewLinks.map((link) => (
@@ -558,20 +655,20 @@ export default function DashboardPage() {
     }
 
     return (
-      <div className="flex min-h-[430px] flex-col items-center rounded-[20px] bg-[linear-gradient(180deg,#3d2b1f_0%,#201710_100%)] px-5 py-6 text-center text-white">
+      <div
+        className="flex min-h-[430px] flex-col items-center rounded-[20px] px-5 py-6 text-center text-white"
+        style={{
+          background: `linear-gradient(180deg, ${form.colorPalette.accent} 0%, #201710 100%)`,
+        }}
+      >
         {hasLogo ? (
           renderLogo(form.logoUrl, 'Business logo', 'circle')
         ) : (
           <div className="mb-5 h-16 w-16 rounded-full bg-white/10" />
         )}
 
-        <h3 className="text-lg font-semibold">
-          {form.businessName || 'Business Name'}
-        </h3>
-
-        <p className="mt-1 text-sm text-white/70">
-          {form.tagline || 'Tap to connect'}
-        </p>
+        <h3 className="text-lg font-semibold">{headline}</h3>
+        <p className="mt-1 text-sm text-white/70">{description}</p>
 
         <div className="mt-8 w-full space-y-3">
           {previewLinks.map((link) => (
@@ -658,7 +755,7 @@ export default function DashboardPage() {
               <>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
-                    {editingId ? 'Edit Page' : 'Choose a Template'}
+                    {editingId ? 'Edit Page' : 'Create Page'}
                   </h2>
 
                   {editingId ? (
@@ -682,7 +779,12 @@ export default function DashboardPage() {
                         : 'border border-[var(--border)]'
                     }`}
                   >
-                    <div className="h-28 rounded-xl bg-[linear-gradient(180deg,#3d2b1f_0%,#201710_100%)]" />
+                    <div
+                      className="h-28 rounded-xl"
+                      style={{
+                        background: `linear-gradient(180deg, ${form.colorPalette.accent} 0%, #201710 100%)`,
+                      }}
+                    />
                     <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
                       Classic Dark
                     </p>
@@ -697,7 +799,10 @@ export default function DashboardPage() {
                         : 'border border-[var(--border)]'
                     }`}
                   >
-                    <div className="h-28 rounded-xl border border-[var(--border)] bg-[#f8f4ef]" />
+                    <div
+                      className="h-28 rounded-xl border border-[var(--border)]"
+                      style={{ backgroundColor: form.colorPalette.background }}
+                    />
                     <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
                       Minimal Light
                     </p>
@@ -712,7 +817,12 @@ export default function DashboardPage() {
                         : 'border border-[var(--border)]'
                     }`}
                   >
-                    <div className="h-28 rounded-xl bg-[linear-gradient(180deg,#f3e7d8_0%,#e5cfb5_100%)]" />
+                    <div
+                      className="h-28 rounded-xl"
+                      style={{
+                        background: `linear-gradient(180deg, ${form.colorPalette.background} 0%, ${form.colorPalette.accent} 100%)`,
+                      }}
+                    />
                     <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
                       Warm Card
                     </p>
@@ -739,6 +849,78 @@ export default function DashboardPage() {
 
                   <input
                     type="text"
+                    value={form.pageHeadline}
+                    onChange={(e) => updateField('pageHeadline', e.target.value)}
+                    placeholder="AI page headline"
+                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  />
+
+                  <textarea
+                    value={form.pageDescription}
+                    onChange={(e) => updateField('pageDescription', e.target.value)}
+                    placeholder="AI page description"
+                    className="min-h-24 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                  />
+
+                  <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+                    <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
+                      Page Colours
+                    </h3>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="text-xs text-[var(--mocha)]">
+                        Background
+                        <input
+                          type="color"
+                          value={form.colorPalette.background}
+                          onChange={(e) => updateColorField('background', e.target.value)}
+                          className="mt-1 h-10 w-full"
+                        />
+                      </label>
+
+                      <label className="text-xs text-[var(--mocha)]">
+                        Accent
+                        <input
+                          type="color"
+                          value={form.colorPalette.accent}
+                          onChange={(e) => updateColorField('accent', e.target.value)}
+                          className="mt-1 h-10 w-full"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+                    <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
+                      Flyer Wording
+                    </h3>
+
+                    <input
+                      type="text"
+                      value={form.flyerHeadline}
+                      onChange={(e) => updateField('flyerHeadline', e.target.value)}
+                      placeholder="Flyer headline"
+                      className="mb-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                    />
+
+                    <textarea
+                      value={form.flyerSubtext}
+                      onChange={(e) => updateField('flyerSubtext', e.target.value)}
+                      placeholder="Flyer subtext"
+                      className="mb-3 min-h-20 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                    />
+
+                    <input
+                      type="text"
+                      value={form.flyerCallout}
+                      onChange={(e) => updateField('flyerCallout', e.target.value)}
+                      placeholder="Flyer callout"
+                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                    />
+                  </div>
+
+                  <input
+                    type="text"
                     value={slug}
                     readOnly
                     className="w-full rounded-xl border border-[var(--border)] bg-[#f5efe8] px-4 py-3 text-sm text-[var(--mocha)]"
@@ -752,6 +934,7 @@ export default function DashboardPage() {
                       onChange={(e) => updateField('isPublished', e.target.checked)}
                       className="h-4 w-4"
                     />
+
                     <label
                       htmlFor="publish-toggle"
                       className="text-sm font-medium text-[var(--text)]"
@@ -773,9 +956,7 @@ export default function DashboardPage() {
                     />
 
                     {uploadingLogo ? (
-                      <p className="mt-2 text-xs text-[var(--mocha)]">
-                        Uploading...
-                      </p>
+                      <p className="mt-2 text-xs text-[var(--mocha)]">Uploading...</p>
                     ) : null}
 
                     {form.logoUrl ? (
@@ -790,6 +971,7 @@ export default function DashboardPage() {
                             unoptimized
                           />
                         </div>
+
                         <p className="text-xs text-green-700">Logo uploaded</p>
                       </div>
                     ) : null}
@@ -849,7 +1031,10 @@ export default function DashboardPage() {
                   <button
                     type="submit"
                     disabled={loading || uploadingLogo}
-                    className="mt-4 w-full rounded-xl bg-[linear-gradient(135deg,#b8926b_0%,#8f6d4e_100%)] px-4 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
+                    className="mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
+                    style={{
+                      background: `linear-gradient(135deg, ${form.colorPalette.accent} 0%, #2b211b 100%)`,
+                    }}
                   >
                     {loading
                       ? editingId

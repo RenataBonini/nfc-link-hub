@@ -14,13 +14,30 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 
+type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
+
+type ColorPalette = {
+  primary: string
+  secondary: string
+  background: string
+  accent: string
+}
+
 type Recommendation = {
   personaName: string
   personaDescription: string
-  recommendedTemplate: 'classic-dark' | 'minimal-light' | 'warm-card'
+  recommendedTemplate: TemplateType
   recommendedCTA: string
   recommendedTagline: string
+  pageHeadline?: string
+  pageDescription?: string
+  primaryButtonText?: string
+  secondaryButtonText?: string
   recommendedLinks: string[]
+  colorPalette?: ColorPalette
+  flyerHeadline?: string
+  flyerSubtext?: string
+  flyerCallout?: string
   flyerRecommendation: string
   reason: string
 }
@@ -35,6 +52,13 @@ type SavedRecommendation = {
   primaryPlatform: string
   tone: string
   recommendation: Recommendation
+}
+
+const defaultColorPalette: ColorPalette = {
+  primary: '#2b211b',
+  secondary: '#8f6d4e',
+  background: '#f5efe8',
+  accent: '#b8926b',
 }
 
 const initialForm = {
@@ -78,13 +102,23 @@ export default function AIBuilderPage() {
   function useRecommendationInDashboard() {
     if (!recommendation) return
 
+    const palette = recommendation.colorPalette || defaultColorPalette
+
     localStorage.setItem(
       'aiRecommendation',
       JSON.stringify({
         template: recommendation.recommendedTemplate,
         tagline: recommendation.recommendedTagline,
+        pageHeadline: recommendation.pageHeadline || '',
+        pageDescription: recommendation.pageDescription || '',
+        primaryButtonText: recommendation.primaryButtonText || '',
+        secondaryButtonText: recommendation.secondaryButtonText || '',
+        colorPalette: palette,
+        flyerHeadline: recommendation.flyerHeadline || '',
+        flyerSubtext: recommendation.flyerSubtext || '',
+        flyerCallout: recommendation.flyerCallout || '',
         recommendedCTA: recommendation.recommendedCTA,
-        recommendedLinks: recommendation.recommendedLinks,
+        recommendedLinks: recommendation.recommendedLinks || [],
       })
     )
 
@@ -114,7 +148,18 @@ export default function AIBuilderPage() {
           mainGoal: data.mainGoal || '',
           primaryPlatform: data.primaryPlatform || '',
           tone: data.tone || '',
-          recommendation: data.recommendation,
+          recommendation: {
+            ...data.recommendation,
+            colorPalette: data.recommendation?.colorPalette || defaultColorPalette,
+            pageHeadline: data.recommendation?.pageHeadline || '',
+            pageDescription: data.recommendation?.pageDescription || '',
+            primaryButtonText: data.recommendation?.primaryButtonText || '',
+            secondaryButtonText: data.recommendation?.secondaryButtonText || '',
+            flyerHeadline: data.recommendation?.flyerHeadline || '',
+            flyerSubtext: data.recommendation?.flyerSubtext || '',
+            flyerCallout: data.recommendation?.flyerCallout || '',
+            recommendedLinks: data.recommendation?.recommendedLinks || [],
+          },
         } as SavedRecommendation
       })
 
@@ -142,7 +187,10 @@ export default function AIBuilderPage() {
       mainGoal: form.mainGoal,
       primaryPlatform: form.primaryPlatform,
       tone: form.tone,
-      recommendation: aiRecommendation,
+      recommendation: {
+        ...aiRecommendation,
+        colorPalette: aiRecommendation.colorPalette || defaultColorPalette,
+      },
       createdAt: serverTimestamp(),
     })
 
@@ -171,8 +219,21 @@ export default function AIBuilderPage() {
         throw new Error(data.error || 'AI recommendation failed.')
       }
 
-      setRecommendation(data)
-      await saveRecommendation(data)
+      const nextRecommendation: Recommendation = {
+        ...data,
+        colorPalette: data.colorPalette || defaultColorPalette,
+        pageHeadline: data.pageHeadline || '',
+        pageDescription: data.pageDescription || '',
+        primaryButtonText: data.primaryButtonText || '',
+        secondaryButtonText: data.secondaryButtonText || '',
+        flyerHeadline: data.flyerHeadline || '',
+        flyerSubtext: data.flyerSubtext || '',
+        flyerCallout: data.flyerCallout || '',
+        recommendedLinks: data.recommendedLinks || [],
+      }
+
+      setRecommendation(nextRecommendation)
+      await saveRecommendation(nextRecommendation)
       setMessage('AI recommendation generated and saved.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
@@ -182,6 +243,19 @@ export default function AIBuilderPage() {
   }
 
   function loadSavedRecommendation(saved: SavedRecommendation) {
+    const nextRecommendation: Recommendation = {
+      ...saved.recommendation,
+      colorPalette: saved.recommendation.colorPalette || defaultColorPalette,
+      pageHeadline: saved.recommendation.pageHeadline || '',
+      pageDescription: saved.recommendation.pageDescription || '',
+      primaryButtonText: saved.recommendation.primaryButtonText || '',
+      secondaryButtonText: saved.recommendation.secondaryButtonText || '',
+      flyerHeadline: saved.recommendation.flyerHeadline || '',
+      flyerSubtext: saved.recommendation.flyerSubtext || '',
+      flyerCallout: saved.recommendation.flyerCallout || '',
+      recommendedLinks: saved.recommendation.recommendedLinks || [],
+    }
+
     setForm({
       businessType: saved.businessType,
       targetAudience: saved.targetAudience,
@@ -192,7 +266,7 @@ export default function AIBuilderPage() {
       tone: saved.tone,
     })
 
-    setRecommendation(saved.recommendation)
+    setRecommendation(nextRecommendation)
     setMessage('Saved recommendation loaded.')
     setError('')
   }
@@ -206,7 +280,7 @@ export default function AIBuilderPage() {
               AI Persona Builder
             </h1>
             <p className="mt-2 text-sm text-white/80">
-              Generate and save AI recommendations for your NFC landing page.
+              Generate and save AI branding, CTA, colour, and flyer recommendations.
             </p>
           </div>
 
@@ -398,12 +472,75 @@ export default function AIBuilderPage() {
                   </div>
 
                   <div className="rounded-2xl border border-[#d8c7b8] p-4">
+                    <p className="text-xs text-[#8f6d4e]">Page Headline</p>
+                    <p className="mt-1 font-semibold text-[#2b211b]">
+                      {recommendation.pageHeadline || 'No headline provided'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#d8c7b8] p-4">
+                    <p className="text-xs text-[#8f6d4e]">Page Description</p>
+                    <p className="mt-1 text-sm leading-6 text-[#2b211b]">
+                      {recommendation.pageDescription || 'No description provided'}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-[#d8c7b8] p-4">
+                      <p className="text-xs text-[#8f6d4e]">Primary Button</p>
+                      <p className="mt-1 font-semibold text-[#2b211b]">
+                        {recommendation.primaryButtonText || 'No primary button provided'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-[#d8c7b8] p-4">
+                      <p className="text-xs text-[#8f6d4e]">Secondary Button</p>
+                      <p className="mt-1 font-semibold text-[#2b211b]">
+                        {recommendation.secondaryButtonText || 'No secondary button provided'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#d8c7b8] p-4">
                     <p className="text-xs text-[#8f6d4e]">Recommended Links</p>
                     <ul className="mt-2 list-inside list-disc text-sm text-[#2b211b]">
-                      {recommendation.recommendedLinks.map((link) => (
+                      {(recommendation.recommendedLinks || []).map((link) => (
                         <li key={link}>{link}</li>
                       ))}
                     </ul>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#d8c7b8] p-4">
+                    <p className="text-xs text-[#8f6d4e]">Suggested Colours</p>
+
+                    <div className="mt-3 grid grid-cols-4 gap-2">
+                      {Object.entries(recommendation.colorPalette || defaultColorPalette).map(
+                        ([name, value]) => (
+                          <div key={name} className="text-center">
+                            <div
+                              className="mx-auto h-10 w-10 rounded-full border"
+                              style={{ backgroundColor: value }}
+                            />
+                            <p className="mt-1 text-[10px] text-[#8f6d4e]">
+                              {name}
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#d8c7b8] p-4">
+                    <p className="text-xs text-[#8f6d4e]">Flyer Wording</p>
+                    <p className="mt-1 font-semibold text-[#2b211b]">
+                      {recommendation.flyerHeadline || 'No flyer headline provided'}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[#2b211b]">
+                      {recommendation.flyerSubtext || 'No flyer subtext provided'}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-[#8f6d4e]">
+                      {recommendation.flyerCallout || 'No flyer callout provided'}
+                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-[#d8c7b8] p-4">
