@@ -13,6 +13,8 @@ type Props = {
   }>
 }
 
+type FlyerTemplate = 'classic-nfc' | 'luxury-card' | 'bold-promo'
+
 type ColorPalette = {
   background: string
   accent: string
@@ -22,6 +24,7 @@ type Business = {
   id: string
   name: string
   tagline: string
+  flyerTemplate: FlyerTemplate
   flyerHeadline: string
   flyerSubtext: string
   flyerCallout: string
@@ -48,11 +51,7 @@ export default function FlyerPage({ params }: Props) {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const q = query(
-          collection(db, 'businesses'),
-          where('slug', '==', slug)
-        )
-
+        const q = query(collection(db, 'businesses'), where('slug', '==', slug))
         const snapshot = await getDocs(q)
 
         if (snapshot.empty) {
@@ -78,6 +77,7 @@ export default function FlyerPage({ params }: Props) {
           id: docSnap.id,
           name: data.name || '',
           tagline: data.tagline || '',
+          flyerTemplate: data.flyerTemplate || 'classic-nfc',
           flyerHeadline: data.flyerHeadline || '',
           flyerSubtext: data.flyerSubtext || '',
           flyerCallout: data.flyerCallout || '',
@@ -112,7 +112,7 @@ export default function FlyerPage({ params }: Props) {
 
     const link = document.createElement('a')
     link.href = image
-    link.download = `${business.slug}-nfc-flyer.png`
+    link.download = `${business.slug}-flyer.png`
 
     document.body.appendChild(link)
     link.click()
@@ -154,18 +154,204 @@ export default function FlyerPage({ params }: Props) {
   const publicUrl = `https://nfc-link-hub-8yji.vercel.app/preview/${business.slug}`
 
   const flyerHeadline = business.flyerHeadline || business.name
-
   const flyerSubtext =
     business.flyerSubtext ||
     business.tagline ||
-    'Tap the NFC tag to connect with us instantly.'
+    'Tap the NFC tag to connect instantly.'
+  const flyerCallout = business.flyerCallout || 'Tap the NFC tag'
 
-  const flyerCallout =
-    business.flyerCallout || 'Tap your phone on the NFC tag'
+  function renderLogo(currentBusiness: Business) {
+    if (!currentBusiness.logoUrl) {
+      return (
+        <div
+          className="flex h-full w-full items-center justify-center text-5xl font-bold"
+          style={{ color: currentBusiness.colorPalette.accent }}
+        >
+          {currentBusiness.name.charAt(0).toUpperCase()}
+        </div>
+      )
+    }
+
+    return (
+      <Image
+        src={currentBusiness.logoUrl}
+        alt={`${currentBusiness.name} logo`}
+        fill
+        className="object-contain"
+        unoptimized
+      />
+    )
+  }
+
+  function renderQRSection(currentBusiness: Business) {
+    return (
+      <div className="rounded-[24px] bg-[#faf6f1] px-5 py-6 shadow-sm">
+        <p
+          className="mb-4 text-sm font-semibold"
+          style={{ color: currentBusiness.colorPalette.accent }}
+        >
+          QR code backup
+        </p>
+
+        <div className="flex justify-center">
+          <div className="rounded-2xl bg-white p-4 shadow-md">
+            <QRCodeCanvas
+              value={publicUrl}
+              size={140}
+              bgColor="#ffffff"
+              fgColor="#000000"
+              level="H"
+            />
+          </div>
+        </div>
+
+        <p
+          className="mx-auto mt-4 max-w-xs text-xs leading-5"
+          style={{ color: currentBusiness.colorPalette.accent }}
+        >
+          If NFC is unavailable, scan this QR code instead.
+        </p>
+      </div>
+    )
+  }
+
+  function renderClassicTemplate(currentBusiness: Business) {
+    return (
+      <div className="rounded-[30px] bg-white p-8 text-center shadow-xl sm:p-12">
+        <div className="relative mx-auto mb-8 h-40 w-56">
+          {renderLogo(currentBusiness)}
+        </div>
+
+        <p
+          className="mb-3 text-xs font-semibold uppercase tracking-[0.35em]"
+          style={{ color: currentBusiness.colorPalette.accent }}
+        >
+          NFC Enabled
+        </p>
+
+        <h2 className="text-4xl font-bold text-[#2b211b] sm:text-5xl">
+          {flyerHeadline}
+        </h2>
+
+        <p
+          className="mx-auto mt-4 max-w-md text-base leading-7"
+          style={{ color: currentBusiness.colorPalette.accent }}
+        >
+          {flyerSubtext}
+        </p>
+
+        <div
+          className="my-10 rounded-[32px] border-2 border-dashed px-6 py-10"
+          style={{
+            borderColor: currentBusiness.colorPalette.accent,
+            backgroundColor: currentBusiness.colorPalette.background,
+          }}
+        >
+          <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[#2b211b] text-white shadow-lg">
+            <span className="text-4xl">📡</span>
+          </div>
+
+          <h3 className="text-3xl font-bold text-[#2b211b]">
+            {flyerCallout}
+          </h3>
+
+          <p
+            className="mx-auto mt-3 max-w-sm text-sm leading-6"
+            style={{ color: currentBusiness.colorPalette.accent }}
+          >
+            Place your phone close to the NFC tag to instantly open our digital
+            page.
+          </p>
+        </div>
+
+        {renderQRSection(currentBusiness)}
+      </div>
+    )
+  }
+
+  function renderLuxuryTemplate(currentBusiness: Business) {
+    return (
+      <div className="rounded-[40px] bg-[#111111] p-10 text-center text-white shadow-2xl">
+        <div className="relative mx-auto mb-10 h-44 w-64">
+          {renderLogo(currentBusiness)}
+        </div>
+
+        
+
+        <h2 className="text-5xl font-bold">{flyerHeadline}</h2>
+
+        <p className="mx-auto mt-5 max-w-lg text-lg leading-8 text-white/70">
+          {flyerSubtext}
+        </p>
+
+        <div className="my-12 rounded-[30px] border border-[#d4af37] bg-[#1b1b1b] px-8 py-10">
+          <div className="mb-6 text-6xl">📱</div>
+
+          <h3 className="text-3xl font-semibold">{flyerCallout}</h3>
+
+          <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-white/70">
+            Instantly connect through our premium NFC experience.
+          </p>
+        </div>
+
+        {renderQRSection(currentBusiness)}
+      </div>
+    )
+  }
+
+  function renderBoldPromoTemplate(currentBusiness: Business) {
+    return (
+      <div
+        className="rounded-[36px] p-10 text-center shadow-2xl"
+        style={{
+          background: `linear-gradient(135deg, ${currentBusiness.colorPalette.accent} 0%, #111 100%)`,
+        }}
+      >
+        <div className="relative mx-auto mb-8 h-44 w-64">
+          {renderLogo(currentBusiness)}
+        </div>
+
+        <div className="rounded-[28px] bg-white p-8">
+          <h2 className="text-5xl font-black uppercase text-[#111]">
+            {flyerHeadline}
+          </h2>
+
+          <p className="mx-auto mt-5 max-w-lg text-base leading-8 text-[#555]">
+            {flyerSubtext}
+          </p>
+
+          <div className="my-10 rounded-[24px] bg-[#111] px-6 py-8 text-white">
+            <div className="mb-5 text-5xl">⚡</div>
+
+            <h3 className="text-3xl font-bold">{flyerCallout}</h3>
+
+            <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-white/70">
+              Tap your phone to connect instantly.
+            </p>
+          </div>
+
+          {renderQRSection(currentBusiness)}
+        </div>
+      </div>
+    )
+  }
+
+  function renderFlyerTemplate(currentBusiness: Business) {
+    switch (currentBusiness.flyerTemplate) {
+      case 'luxury-card':
+        return renderLuxuryTemplate(currentBusiness)
+
+      case 'bold-promo':
+        return renderBoldPromoTemplate(currentBusiness)
+
+      default:
+        return renderClassicTemplate(currentBusiness)
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#b8926b_0%,#8f6d4e_100%)] px-4 py-8">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex flex-col gap-3 text-white sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Flyer Generator</h1>
@@ -200,120 +386,8 @@ export default function FlyerPage({ params }: Props) {
         ) : null}
 
         <div className="flex justify-center">
-          <div
-            ref={flyerRef}
-            className="w-full max-w-[720px] rounded-[36px] p-8 shadow-2xl sm:p-12"
-            style={{
-              background: `linear-gradient(135deg, ${business.colorPalette.background} 0%, ${business.colorPalette.accent} 100%)`,
-            }}
-          >
-            <div className="rounded-[30px] border border-[#d8c7b8] bg-white p-8 text-center shadow-xl sm:p-12">
-              {/* Logo */}
-              <div className="mx-auto mb-8 flex h-40 w-56 items-center justify-center rounded-[32px] bg-white p-4 shadow-xl">
-                {business.logoUrl ? (
-                  <Image
-                    src={business.logoUrl}
-                    alt={`${business.name} logo`}
-                    width={220}
-                    height={140}
-                    className="h-full w-full object-contain"
-                    unoptimized
-                  />
-                ) : (
-                  <span
-                    className="text-5xl font-bold"
-                    style={{ color: business.colorPalette.accent }}
-                  >
-                    {business.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-
-              <p
-                className="mb-3 text-xs font-semibold uppercase tracking-[0.35em]"
-                style={{ color: business.colorPalette.accent }}
-              >
-                NFC Enabled
-              </p>
-
-              <h2 className="text-4xl font-bold text-[#2b211b] sm:text-5xl">
-                {flyerHeadline}
-              </h2>
-
-              <p
-                className="mx-auto mt-4 max-w-md text-base leading-7"
-                style={{ color: business.colorPalette.accent }}
-              >
-                {flyerSubtext}
-              </p>
-
-              {/* NFC Main Section */}
-              <div
-                className="my-10 rounded-[32px] border-2 border-dashed px-6 py-10"
-                style={{
-                  borderColor: business.colorPalette.accent,
-                  backgroundColor: business.colorPalette.background,
-                }}
-              >
-                <div
-                  className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full text-white shadow-lg"
-                  style={{ backgroundColor: '#2b211b' }}
-                >
-                  <span className="text-4xl">📡</span>
-                </div>
-
-                <h3 className="text-3xl font-bold text-[#2b211b]">
-                  {flyerCallout}
-                </h3>
-
-                <p
-                  className="mx-auto mt-3 max-w-sm text-sm leading-6"
-                  style={{ color: business.colorPalette.accent }}
-                >
-                  Place your phone close to the NFC tag to instantly open our
-                  digital page. No app is needed.
-                </p>
-              </div>
-
-              {/* QR Backup */}
-              <div
-                className="rounded-[24px] border px-5 py-6 shadow-sm"
-                style={{
-                  borderColor: business.colorPalette.accent,
-                  backgroundColor: '#faf6f1',
-                }}
-              >
-                <p
-                  className="mb-4 text-sm font-semibold"
-                  style={{ color: business.colorPalette.accent }}
-                >
-                  QR code backup
-                </p>
-
-                <div className="flex justify-center">
-                  <div className="rounded-2xl bg-white p-4 shadow-md">
-                    <QRCodeCanvas
-                      value={publicUrl}
-                      size={140}
-                      bgColor="#ffffff"
-                      fgColor="#000000"
-                      level="H"
-                    />
-                  </div>
-                </div>
-
-                <p
-                  className="mx-auto mt-4 max-w-xs text-xs leading-5"
-                  style={{ color: business.colorPalette.accent }}
-                >
-                  If NFC is unavailable, scan this QR code instead.
-                </p>
-              </div>
-
-              <p className="mt-8 text-sm font-medium text-[#2b211b]">
-                Tap. Connect. Engage.
-              </p>
-            </div>
+          <div ref={flyerRef} className="w-full max-w-[760px]">
+            {renderFlyerTemplate(business)}
           </div>
         </div>
       </div>

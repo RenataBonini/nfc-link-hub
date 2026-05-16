@@ -22,6 +22,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/lib/firebase'
 
 type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
+type FlyerTemplate = 'classic-nfc' | 'luxury-card' | 'bold-promo'
 
 type LinkItem = {
   type: string
@@ -39,6 +40,7 @@ type FormData = {
   tagline: string
   pageHeadline: string
   pageDescription: string
+  flyerTemplate: FlyerTemplate
   flyerHeadline: string
   flyerSubtext: string
   flyerCallout: string
@@ -60,6 +62,7 @@ type Business = {
   tagline: string
   pageHeadline: string
   pageDescription: string
+  flyerTemplate: FlyerTemplate
   flyerHeadline: string
   flyerSubtext: string
   flyerCallout: string
@@ -84,6 +87,7 @@ const initialForm: FormData = {
   tagline: '',
   pageHeadline: '',
   pageDescription: '',
+  flyerTemplate: 'classic-nfc',
   flyerHeadline: '',
   flyerSubtext: '',
   flyerCallout: '',
@@ -109,6 +113,10 @@ function slugify(value: string) {
 
 function isTemplate(value: unknown): value is TemplateType {
   return value === 'classic-dark' || value === 'minimal-light' || value === 'warm-card'
+}
+
+function isFlyerTemplate(value: unknown): value is FlyerTemplate {
+  return value === 'classic-nfc' || value === 'luxury-card' || value === 'bold-promo'
 }
 
 export default function DashboardPage() {
@@ -198,42 +206,45 @@ export default function DashboardPage() {
   }, [router])
 
   useEffect(() => {
-  const savedRecommendation = localStorage.getItem('aiRecommendation')
+    const savedRecommendation = localStorage.getItem('aiRecommendation')
 
-  if (!savedRecommendation) return
+    if (!savedRecommendation) return
 
-  try {
-    const parsed = JSON.parse(savedRecommendation)
+    try {
+      const parsed = JSON.parse(savedRecommendation)
 
-    window.setTimeout(() => {
-      setForm((prev) => ({
-        ...prev,
-        tagline: parsed.tagline || prev.tagline,
-        pageHeadline: parsed.pageHeadline || prev.pageHeadline,
-        pageDescription: parsed.pageDescription || prev.pageDescription,
-        flyerHeadline: parsed.flyerHeadline || prev.flyerHeadline,
-        flyerSubtext: parsed.flyerSubtext || prev.flyerSubtext,
-        flyerCallout: parsed.flyerCallout || prev.flyerCallout,
-        template: isTemplate(parsed.template) ? parsed.template : prev.template,
-        colorPalette: {
-          background:
-            parsed.colorPalette?.background ||
-            parsed.colorPalette?.primary ||
-            prev.colorPalette.background,
-          accent:
-            parsed.colorPalette?.accent ||
-            parsed.colorPalette?.secondary ||
-            prev.colorPalette.accent,
-        },
-      }))
+      window.setTimeout(() => {
+        setForm((prev) => ({
+          ...prev,
+          tagline: parsed.tagline || prev.tagline,
+          pageHeadline: parsed.pageHeadline || prev.pageHeadline,
+          pageDescription: parsed.pageDescription || prev.pageDescription,
+          flyerTemplate: isFlyerTemplate(parsed.flyerTemplate)
+            ? parsed.flyerTemplate
+            : prev.flyerTemplate,
+          flyerHeadline: parsed.flyerHeadline || prev.flyerHeadline,
+          flyerSubtext: parsed.flyerSubtext || prev.flyerSubtext,
+          flyerCallout: parsed.flyerCallout || prev.flyerCallout,
+          template: isTemplate(parsed.template) ? parsed.template : prev.template,
+          colorPalette: {
+            background:
+              parsed.colorPalette?.background ||
+              parsed.colorPalette?.primary ||
+              prev.colorPalette.background,
+            accent:
+              parsed.colorPalette?.accent ||
+              parsed.colorPalette?.secondary ||
+              prev.colorPalette.accent,
+          },
+        }))
 
-      setMessage('AI recommendation applied. Add your business name, logo, and links.')
-      localStorage.removeItem('aiRecommendation')
-    }, 0)
-  } catch (err) {
-    console.error(err)
-  }
-}, [])
+        setMessage('AI recommendation applied. Add your business name, logo, and links.')
+        localStorage.removeItem('aiRecommendation')
+      }, 0)
+    } catch (err) {
+      console.error(err)
+    }
+  }, [])
 
   function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -312,6 +323,7 @@ export default function DashboardPage() {
           tagline: data.tagline || '',
           pageHeadline: data.pageHeadline || '',
           pageDescription: data.pageDescription || '',
+          flyerTemplate: data.flyerTemplate || 'classic-nfc',
           flyerHeadline: data.flyerHeadline || '',
           flyerSubtext: data.flyerSubtext || '',
           flyerCallout: data.flyerCallout || '',
@@ -373,6 +385,7 @@ export default function DashboardPage() {
         tagline: form.tagline.trim(),
         pageHeadline: form.pageHeadline.trim(),
         pageDescription: form.pageDescription.trim(),
+        flyerTemplate: form.flyerTemplate,
         flyerHeadline: form.flyerHeadline.trim(),
         flyerSubtext: form.flyerSubtext.trim(),
         flyerCallout: form.flyerCallout.trim(),
@@ -429,6 +442,7 @@ export default function DashboardPage() {
         tagline: data.tagline || '',
         pageHeadline: data.pageHeadline || '',
         pageDescription: data.pageDescription || '',
+        flyerTemplate: data.flyerTemplate || 'classic-nfc',
         flyerHeadline: data.flyerHeadline || '',
         flyerSubtext: data.flyerSubtext || '',
         flyerCallout: data.flyerCallout || '',
@@ -894,6 +908,18 @@ export default function DashboardPage() {
                     <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
                       Flyer Wording
                     </h3>
+
+                    <select
+                      value={form.flyerTemplate}
+                      onChange={(e) =>
+                        updateField('flyerTemplate', e.target.value as FlyerTemplate)
+                      }
+                      className="mb-4 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                    >
+                      <option value="classic-nfc">Classic NFC</option>
+                      <option value="luxury-card">Luxury Card</option>
+                      <option value="bold-promo">Bold Promo</option>
+                    </select>
 
                     <input
                       type="text"
