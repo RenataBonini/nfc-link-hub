@@ -1,8 +1,7 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
-import { use, useEffect, useRef, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -39,10 +38,10 @@ const defaultColorPalette: ColorPalette = {
   accent: '#b8926b',
 }
 
+const SITE_URL = 'https://nfc-link-hub-8yji.vercel.app'
+
 export default function FlyerPage({ params }: Props) {
   const { slug } = use(params)
-
-  const flyerRef = useRef<HTMLDivElement | null>(null)
 
   const [business, setBusiness] = useState<Business | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,7 +50,11 @@ export default function FlyerPage({ params }: Props) {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const q = query(collection(db, 'businesses'), where('slug', '==', slug))
+        const q = query(
+          collection(db, 'businesses'),
+          where('slug', '==', slug)
+        )
+
         const snapshot = await getDocs(q)
 
         if (snapshot.empty) {
@@ -62,17 +65,6 @@ export default function FlyerPage({ params }: Props) {
         const docSnap = snapshot.docs[0]
         const data = docSnap.data()
 
-        const colorPalette: ColorPalette = {
-          background:
-            data.colorPalette?.background ||
-            data.colorPalette?.primary ||
-            defaultColorPalette.background,
-          accent:
-            data.colorPalette?.accent ||
-            data.colorPalette?.secondary ||
-            defaultColorPalette.accent,
-        }
-
         setBusiness({
           id: docSnap.id,
           name: data.name || '',
@@ -81,7 +73,14 @@ export default function FlyerPage({ params }: Props) {
           flyerHeadline: data.flyerHeadline || '',
           flyerSubtext: data.flyerSubtext || '',
           flyerCallout: data.flyerCallout || '',
-          colorPalette,
+          colorPalette: {
+            background:
+              data.colorPalette?.background ||
+              defaultColorPalette.background,
+            accent:
+              data.colorPalette?.accent ||
+              defaultColorPalette.accent,
+          },
           slug: data.slug || '',
           logoUrl: data.logoUrl || '',
           isPublished: Boolean(data.isPublished),
@@ -97,15 +96,39 @@ export default function FlyerPage({ params }: Props) {
     loadBusiness()
   }, [slug])
 
-  async function downloadFlyer() {
-    const html2canvas = (await import('html2canvas')).default
+  async function waitForImages() {
+    const element = document.getElementById('flyer-download')
+    if (!element) return
 
-    if (!flyerRef.current || !business) return
+    const images = Array.from(element.querySelectorAll('img'))
 
-    const canvas = await html2canvas(flyerRef.current, {
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve()
+
+        return new Promise<void>((resolve) => {
+          img.onload = () => resolve()
+          img.onerror = () => resolve()
+        })
+      })
+    )
+  }
+
+  async function downloadPNG() {
+    const html2canvas = (await import('html2canvas-pro')).default
+
+    const element = document.getElementById('flyer-download')
+
+    if (!element || !business) return
+
+    await waitForImages()
+
+    const canvas = await html2canvas(element, {
       scale: 2,
-      backgroundColor: business.colorPalette.background,
       useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      logging: false,
     })
 
     const image = canvas.toDataURL('image/png')
@@ -118,7 +141,43 @@ export default function FlyerPage({ params }: Props) {
     link.click()
     document.body.removeChild(link)
 
-    setMessage('Flyer downloaded successfully.')
+    setMessage('PNG flyer downloaded successfully.')
+
+    setTimeout(() => {
+      setMessage('')
+    }, 2500)
+  }
+
+  async function downloadPDF() {
+    const html2canvas = (await import('html2canvas-pro')).default
+    const { jsPDF } = await import('jspdf')
+
+    const element = document.getElementById('flyer-download')
+
+    if (!element || !business) return
+
+    await waitForImages()
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null,
+      logging: false,
+    })
+
+    const image = canvas.toDataURL('image/png')
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'px',
+      format: [canvas.width, canvas.height],
+    })
+
+    pdf.addImage(image, 'PNG', 0, 0, canvas.width, canvas.height)
+    pdf.save(`${business.slug}-flyer.pdf`)
+
+    setMessage('PDF flyer downloaded successfully.')
 
     setTimeout(() => {
       setMessage('')
@@ -151,20 +210,22 @@ export default function FlyerPage({ params }: Props) {
     )
   }
 
-  const publicUrl = `https://nfc-link-hub-8yji.vercel.app/preview/${business.slug}`
+  const publicUrl = `${SITE_URL}/preview/${business.slug}`
 
   const flyerHeadline = business.flyerHeadline || business.name
+
   const flyerSubtext =
     business.flyerSubtext ||
     business.tagline ||
     'Tap the NFC tag to connect instantly.'
+
   const flyerCallout = business.flyerCallout || 'Tap the NFC tag'
 
   function renderLogo(currentBusiness: Business) {
     if (!currentBusiness.logoUrl) {
       return (
         <div
-          className="flex h-full w-full items-center justify-center text-5xl font-bold"
+          className="flex h-full w-full items-center justify-center rounded-[28px] bg-white text-5xl font-bold"
           style={{ color: currentBusiness.colorPalette.accent }}
         >
           {currentBusiness.name.charAt(0).toUpperCase()}
@@ -172,14 +233,44 @@ export default function FlyerPage({ params }: Props) {
       )
     }
 
+    const proxyLogoUrl = `/api/image-proxy?url=${encodeURIComponent(
+      currentBusiness.logoUrl
+    )}`
+
     return (
-      <Image
-        src={currentBusiness.logoUrl}
-        alt={`${currentBusiness.name} logo`}
-        fill
-        className="object-contain"
-        unoptimized
-      />
+      <div className="flex h-full w-full items-center justify-center rounded-[28px] bg-white p-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={proxyLogoUrl}
+          alt={`${currentBusiness.name} logo`}
+          className="h-full w-full object-contain"
+          onError={(event) => {
+            const image = event.currentTarget
+            image.style.display = 'none'
+
+            const parent = image.parentElement
+
+            if (parent) {
+              parent.innerHTML = `
+                <div
+                  style="
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    width:100%;
+                    height:100%;
+                    font-size:48px;
+                    font-weight:700;
+                    color:${currentBusiness.colorPalette.accent};
+                  "
+                >
+                  ${currentBusiness.name.charAt(0).toUpperCase()}
+                </div>
+              `
+            }
+          }}
+        />
+      </div>
     )
   }
 
@@ -211,6 +302,38 @@ export default function FlyerPage({ params }: Props) {
         >
           If NFC is unavailable, scan this QR code instead.
         </p>
+      </div>
+    )
+  }
+
+  function renderLuxuryTemplate(currentBusiness: Business) {
+    return (
+      <div className="rounded-[40px] bg-[#111111] p-10 text-center text-white shadow-2xl">
+        <div className="relative mx-auto mb-10 h-44 w-64">
+          {renderLogo(currentBusiness)}
+        </div>
+
+        <p className="mb-4 text-sm uppercase tracking-[0.4em] text-[#d4af37]">
+          Premium NFC Access
+        </p>
+
+        <h2 className="text-5xl font-bold">{flyerHeadline}</h2>
+
+        <p className="mx-auto mt-5 max-w-lg text-lg leading-8 text-white/70">
+          {flyerSubtext}
+        </p>
+
+        <div className="my-12 rounded-[30px] border border-[#d4af37] bg-[#1b1b1b] px-8 py-10">
+          <div className="mb-6 text-6xl">📱</div>
+
+          <h3 className="text-3xl font-semibold">{flyerCallout}</h3>
+
+          <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-white/70">
+            Instantly connect through our premium NFC experience.
+          </p>
+        </div>
+
+        {renderQRSection(currentBusiness)}
       </div>
     )
   }
@@ -269,36 +392,6 @@ export default function FlyerPage({ params }: Props) {
     )
   }
 
-  function renderLuxuryTemplate(currentBusiness: Business) {
-    return (
-      <div className="rounded-[40px] bg-[#111111] p-10 text-center text-white shadow-2xl">
-        <div className="relative mx-auto mb-10 h-44 w-64">
-          {renderLogo(currentBusiness)}
-        </div>
-
-        
-
-        <h2 className="text-5xl font-bold">{flyerHeadline}</h2>
-
-        <p className="mx-auto mt-5 max-w-lg text-lg leading-8 text-white/70">
-          {flyerSubtext}
-        </p>
-
-        <div className="my-12 rounded-[30px] border border-[#d4af37] bg-[#1b1b1b] px-8 py-10">
-          <div className="mb-6 text-6xl">📱</div>
-
-          <h3 className="text-3xl font-semibold">{flyerCallout}</h3>
-
-          <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-white/70">
-            Instantly connect through our premium NFC experience.
-          </p>
-        </div>
-
-        {renderQRSection(currentBusiness)}
-      </div>
-    )
-  }
-
   function renderBoldPromoTemplate(currentBusiness: Business) {
     return (
       <div
@@ -336,7 +429,7 @@ export default function FlyerPage({ params }: Props) {
     )
   }
 
-  function renderFlyerTemplate(currentBusiness: Business) {
+  function renderTemplate(currentBusiness: Business) {
     switch (currentBusiness.flyerTemplate) {
       case 'luxury-card':
         return renderLuxuryTemplate(currentBusiness)
@@ -361,7 +454,7 @@ export default function FlyerPage({ params }: Props) {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               href="/dashboard"
               className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#2b211b]"
@@ -371,10 +464,18 @@ export default function FlyerPage({ params }: Props) {
 
             <button
               type="button"
-              onClick={downloadFlyer}
+              onClick={downloadPNG}
               className="rounded-xl bg-[#2b211b] px-4 py-2 text-sm font-semibold text-white"
             >
-              Download Flyer
+              Download PNG
+            </button>
+
+            <button
+              type="button"
+              onClick={downloadPDF}
+              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#2b211b]"
+            >
+              Download PDF
             </button>
           </div>
         </div>
@@ -386,8 +487,8 @@ export default function FlyerPage({ params }: Props) {
         ) : null}
 
         <div className="flex justify-center">
-          <div ref={flyerRef} className="w-full max-w-[760px]">
-            {renderFlyerTemplate(business)}
+          <div id="flyer-download" className="w-full max-w-[760px]">
+            {renderTemplate(business)}
           </div>
         </div>
       </div>
