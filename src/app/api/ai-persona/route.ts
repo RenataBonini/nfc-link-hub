@@ -28,7 +28,12 @@ Main goal: ${body.mainGoal}
 Primary platform: ${body.primaryPlatform}
 Tone: ${body.tone}
 
-Recommend the best NFC landing page strategy.
+Recommend the best NFC landing page and flyer strategy.
+
+Flyer template rules:
+- "classic-nfc" for simple, local, friendly, service businesses
+- "luxury-card" for premium, elegant, beauty, real estate, high-end brands
+- "bold-promo" for gyms, events, nightlife, offers, energetic brands
           `,
         },
       ],
@@ -48,14 +53,16 @@ Recommend the best NFC landing page strategy.
                 enum: ['classic-dark', 'minimal-light', 'warm-card'],
               },
 
+              flyerTemplate: {
+                type: 'string',
+                enum: ['classic-nfc', 'luxury-card', 'bold-promo'],
+              },
+
               recommendedCTA: { type: 'string' },
               recommendedTagline: { type: 'string' },
 
               pageHeadline: { type: 'string' },
               pageDescription: { type: 'string' },
-
-              primaryButtonText: { type: 'string' },
-              secondaryButtonText: { type: 'string' },
 
               recommendedLinks: {
                 type: 'array',
@@ -66,12 +73,10 @@ Recommend the best NFC landing page strategy.
                 type: 'object',
                 additionalProperties: false,
                 properties: {
-                  primary: { type: 'string' },
-                  secondary: { type: 'string' },
                   background: { type: 'string' },
                   accent: { type: 'string' },
                 },
-                required: ['primary', 'secondary', 'background', 'accent'],
+                required: ['background', 'accent'],
               },
 
               flyerHeadline: { type: 'string' },
@@ -85,12 +90,11 @@ Recommend the best NFC landing page strategy.
               'personaName',
               'personaDescription',
               'recommendedTemplate',
+              'flyerTemplate',
               'recommendedCTA',
               'recommendedTagline',
               'pageHeadline',
               'pageDescription',
-              'primaryButtonText',
-              'secondaryButtonText',
               'recommendedLinks',
               'colorPalette',
               'flyerHeadline',

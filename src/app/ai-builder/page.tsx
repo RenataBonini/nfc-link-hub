@@ -15,10 +15,11 @@ import {
 import { auth, db } from '@/lib/firebase'
 
 type TemplateType = 'classic-dark' | 'minimal-light' | 'warm-card'
+type FlyerTemplate = 'classic-nfc' | 'luxury-card' | 'bold-promo'
 
 type ColorPalette = {
-  primary: string
-  secondary: string
+  primary?: string
+  secondary?: string
   background: string
   accent: string
 }
@@ -27,12 +28,11 @@ type Recommendation = {
   personaName: string
   personaDescription: string
   recommendedTemplate: TemplateType
+  flyerTemplate: FlyerTemplate
   recommendedCTA: string
   recommendedTagline: string
   pageHeadline?: string
   pageDescription?: string
-  primaryButtonText?: string
-  secondaryButtonText?: string
   recommendedLinks: string[]
   colorPalette?: ColorPalette
   flyerHeadline?: string
@@ -69,6 +69,10 @@ const initialForm = {
   mainGoal: '',
   primaryPlatform: '',
   tone: '',
+}
+
+function isFlyerTemplate(value: unknown): value is FlyerTemplate {
+  return value === 'classic-nfc' || value === 'luxury-card' || value === 'bold-promo'
 }
 
 export default function AIBuilderPage() {
@@ -108,11 +112,10 @@ export default function AIBuilderPage() {
       'aiRecommendation',
       JSON.stringify({
         template: recommendation.recommendedTemplate,
+        flyerTemplate: recommendation.flyerTemplate || 'classic-nfc',
         tagline: recommendation.recommendedTagline,
         pageHeadline: recommendation.pageHeadline || '',
         pageDescription: recommendation.pageDescription || '',
-        primaryButtonText: recommendation.primaryButtonText || '',
-        secondaryButtonText: recommendation.secondaryButtonText || '',
         colorPalette: palette,
         flyerHeadline: recommendation.flyerHeadline || '',
         flyerSubtext: recommendation.flyerSubtext || '',
@@ -138,6 +141,7 @@ export default function AIBuilderPage() {
 
       const items = snapshot.docs.map((document) => {
         const data = document.data()
+        const savedRecommendation = data.recommendation || {}
 
         return {
           id: document.id,
@@ -149,16 +153,17 @@ export default function AIBuilderPage() {
           primaryPlatform: data.primaryPlatform || '',
           tone: data.tone || '',
           recommendation: {
-            ...data.recommendation,
-            colorPalette: data.recommendation?.colorPalette || defaultColorPalette,
-            pageHeadline: data.recommendation?.pageHeadline || '',
-            pageDescription: data.recommendation?.pageDescription || '',
-            primaryButtonText: data.recommendation?.primaryButtonText || '',
-            secondaryButtonText: data.recommendation?.secondaryButtonText || '',
-            flyerHeadline: data.recommendation?.flyerHeadline || '',
-            flyerSubtext: data.recommendation?.flyerSubtext || '',
-            flyerCallout: data.recommendation?.flyerCallout || '',
-            recommendedLinks: data.recommendation?.recommendedLinks || [],
+            ...savedRecommendation,
+            flyerTemplate: isFlyerTemplate(savedRecommendation.flyerTemplate)
+              ? savedRecommendation.flyerTemplate
+              : 'classic-nfc',
+            colorPalette: savedRecommendation.colorPalette || defaultColorPalette,
+            pageHeadline: savedRecommendation.pageHeadline || '',
+            pageDescription: savedRecommendation.pageDescription || '',
+            flyerHeadline: savedRecommendation.flyerHeadline || '',
+            flyerSubtext: savedRecommendation.flyerSubtext || '',
+            flyerCallout: savedRecommendation.flyerCallout || '',
+            recommendedLinks: savedRecommendation.recommendedLinks || [],
           },
         } as SavedRecommendation
       })
@@ -189,6 +194,7 @@ export default function AIBuilderPage() {
       tone: form.tone,
       recommendation: {
         ...aiRecommendation,
+        flyerTemplate: aiRecommendation.flyerTemplate || 'classic-nfc',
         colorPalette: aiRecommendation.colorPalette || defaultColorPalette,
       },
       createdAt: serverTimestamp(),
@@ -221,11 +227,12 @@ export default function AIBuilderPage() {
 
       const nextRecommendation: Recommendation = {
         ...data,
+        flyerTemplate: isFlyerTemplate(data.flyerTemplate)
+          ? data.flyerTemplate
+          : 'classic-nfc',
         colorPalette: data.colorPalette || defaultColorPalette,
         pageHeadline: data.pageHeadline || '',
         pageDescription: data.pageDescription || '',
-        primaryButtonText: data.primaryButtonText || '',
-        secondaryButtonText: data.secondaryButtonText || '',
         flyerHeadline: data.flyerHeadline || '',
         flyerSubtext: data.flyerSubtext || '',
         flyerCallout: data.flyerCallout || '',
@@ -245,11 +252,10 @@ export default function AIBuilderPage() {
   function loadSavedRecommendation(saved: SavedRecommendation) {
     const nextRecommendation: Recommendation = {
       ...saved.recommendation,
+      flyerTemplate: saved.recommendation.flyerTemplate || 'classic-nfc',
       colorPalette: saved.recommendation.colorPalette || defaultColorPalette,
       pageHeadline: saved.recommendation.pageHeadline || '',
       pageDescription: saved.recommendation.pageDescription || '',
-      primaryButtonText: saved.recommendation.primaryButtonText || '',
-      secondaryButtonText: saved.recommendation.secondaryButtonText || '',
       flyerHeadline: saved.recommendation.flyerHeadline || '',
       flyerSubtext: saved.recommendation.flyerSubtext || '',
       flyerCallout: saved.recommendation.flyerCallout || '',
@@ -280,7 +286,7 @@ export default function AIBuilderPage() {
               AI Persona Builder
             </h1>
             <p className="mt-2 text-sm text-white/80">
-              Generate and save AI branding, CTA, colour, and flyer recommendations.
+              Generate and save AI branding, colours, page content, and flyer recommendations.
             </p>
           </div>
 
@@ -450,18 +456,25 @@ export default function AIBuilderPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl border border-[#d8c7b8] p-4">
-                      <p className="text-xs text-[#8f6d4e]">Template</p>
+                      <p className="text-xs text-[#8f6d4e]">Page Template</p>
                       <p className="mt-1 font-semibold text-[#2b211b]">
                         {recommendation.recommendedTemplate}
                       </p>
                     </div>
 
                     <div className="rounded-2xl border border-[#d8c7b8] p-4">
-                      <p className="text-xs text-[#8f6d4e]">Main CTA</p>
+                      <p className="text-xs text-[#8f6d4e]">Flyer Template</p>
                       <p className="mt-1 font-semibold text-[#2b211b]">
-                        {recommendation.recommendedCTA}
+                        {recommendation.flyerTemplate || 'classic-nfc'}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#d8c7b8] p-4">
+                    <p className="text-xs text-[#8f6d4e]">Main CTA</p>
+                    <p className="mt-1 font-semibold text-[#2b211b]">
+                      {recommendation.recommendedCTA}
+                    </p>
                   </div>
 
                   <div className="rounded-2xl border border-[#d8c7b8] p-4">
@@ -483,22 +496,6 @@ export default function AIBuilderPage() {
                     <p className="mt-1 text-sm leading-6 text-[#2b211b]">
                       {recommendation.pageDescription || 'No description provided'}
                     </p>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-[#d8c7b8] p-4">
-                      <p className="text-xs text-[#8f6d4e]">Primary Button</p>
-                      <p className="mt-1 font-semibold text-[#2b211b]">
-                        {recommendation.primaryButtonText || 'No primary button provided'}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-[#d8c7b8] p-4">
-                      <p className="text-xs text-[#8f6d4e]">Secondary Button</p>
-                      <p className="mt-1 font-semibold text-[#2b211b]">
-                        {recommendation.secondaryButtonText || 'No secondary button provided'}
-                      </p>
-                    </div>
                   </div>
 
                   <div className="rounded-2xl border border-[#d8c7b8] p-4">
