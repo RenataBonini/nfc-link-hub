@@ -140,6 +140,34 @@ export default function DashboardPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
+  const hasAnyLink =
+    Boolean(form.whatsapp.trim()) ||
+    Boolean(form.instagram.trim()) ||
+    Boolean(form.googleReviews.trim()) ||
+    Boolean(form.facebook.trim()) ||
+    Boolean(form.website.trim())
+
+  const onboardingSteps = [
+    {
+      label: 'Business Name',
+      complete: Boolean(form.businessName.trim()),
+    },
+    {
+      label: 'Upload Logo',
+      complete: Boolean(form.logoUrl),
+    },
+    {
+      label: 'Add Links',
+      complete: hasAnyLink,
+    },
+    {
+      label: 'Publish Page',
+      complete: form.isPublished,
+    },
+  ]
+
+  const completedSteps = onboardingSteps.filter((step) => step.complete).length
+
   const slug = useMemo(
     () => slugify(form.businessName || 'business-name'),
     [form.businessName]
@@ -567,13 +595,13 @@ export default function DashboardPage() {
 
     if (shape === 'square') {
       return (
-        <div className="mb-4 h-24 w-24 overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+        <div className="mb-4 flex h-28 w-44 items-center justify-center rounded-3xl bg-white p-3 shadow-md">
           <Image
             src={src}
             alt={alt}
-            width={96}
-            height={96}
-            className="h-full w-full rounded-2xl object-cover"
+            width={160}
+            height={100}
+            className="h-full w-full object-contain"
             unoptimized
           />
         </div>
@@ -581,13 +609,13 @@ export default function DashboardPage() {
     }
 
     return (
-      <div className="mb-4 h-24 w-24 overflow-hidden rounded-full bg-white p-1 shadow-md">
+      <div className="mb-4 flex h-28 w-44 items-center justify-center rounded-3xl bg-white p-3 shadow-md">
         <Image
           src={src}
           alt={alt}
-          width={96}
-          height={96}
-          className="h-full w-full rounded-full object-cover"
+          width={160}
+          height={100}
+          className="h-full w-full object-contain"
           unoptimized
         />
       </div>
@@ -737,525 +765,595 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.7fr_0.9fr]">
-          <section className="rounded-[28px] bg-[rgba(255,255,255,0.9)] p-5 shadow-2xl backdrop-blur-md sm:p-8">
-            <div className="mb-6 flex items-center gap-6 border-b border-[var(--border)] pb-3 text-sm font-semibold">
-              <button
-                type="button"
-                onClick={openCreateTab}
-                className={`pb-2 ${
-                  activeTab === 'create'
-                    ? 'border-b-2 border-[var(--brand)] text-[var(--text)]'
-                    : 'text-[var(--mocha)]/60'
-                }`}
-              >
-                Create New
-              </button>
+        <div className="grid gap-6">
+          <div className="rounded-[28px] bg-[rgba(255,255,255,0.92)] p-5 shadow-2xl backdrop-blur-md sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-[var(--text)]">
+                  Getting Started
+                </h2>
 
-              <button
-                type="button"
-                onClick={openMyPagesTab}
-                className={`pb-2 ${
-                  activeTab === 'pages'
-                    ? 'border-b-2 border-[var(--brand)] text-[var(--text)]'
-                    : 'text-[var(--mocha)]/60'
-                }`}
-              >
-                My Pages
-              </button>
+                <p className="mt-1 text-sm text-[var(--mocha)]/70">
+                  Complete these steps to launch your NFC business page.
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-[#f5efe8] px-5 py-3 text-center">
+                <p className="text-xs uppercase tracking-[0.25em] text-[var(--mocha)]/70">
+                  Progress
+                </p>
+
+                <p className="mt-1 text-3xl font-bold text-[var(--text)]">
+                  {completedSteps}/4
+                </p>
+              </div>
             </div>
 
-            {activeTab === 'create' ? (
-              <>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
-                    {editingId ? 'Edit Page' : 'Create Page'}
-                  </h2>
-
-                  {editingId ? (
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {onboardingSteps.map((step, index) => (
+                <div
+                  key={step.label}
+                  className={`rounded-2xl border p-4 ${
+                    step.complete
+                      ? 'border-green-200 bg-green-50'
+                      : 'border-[var(--border)] bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+                        step.complete
+                          ? 'bg-green-600 text-white'
+                          : 'bg-[#f5efe8] text-[var(--text)]'
+                      }`}
                     >
-                      Cancel Edit
-                    </button>
-                  ) : null}
-                </div>
+                      {step.complete ? '✓' : index + 1}
+                    </div>
 
-                <div className="mb-8 grid gap-4 md:grid-cols-3">
-                  <button
-                    type="button"
-                    onClick={() => updateField('template', 'classic-dark')}
-                    className={`rounded-2xl bg-white p-3 text-left shadow-sm ${
-                      form.template === 'classic-dark'
-                        ? 'border-2 border-[var(--brand)]'
-                        : 'border border-[var(--border)]'
-                    }`}
-                  >
-                    <div
-                      className="h-28 rounded-xl"
-                      style={{
-                        background: `linear-gradient(180deg, ${form.colorPalette.accent} 0%, #201710 100%)`,
-                      }}
-                    />
-                    <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
-                      Classic Dark
-                    </p>
-                  </button>
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text)]">
+                        {step.label}
+                      </p>
 
-                  <button
-                    type="button"
-                    onClick={() => updateField('template', 'minimal-light')}
-                    className={`rounded-2xl bg-white p-3 text-left shadow-sm ${
-                      form.template === 'minimal-light'
-                        ? 'border-2 border-[var(--brand)]'
-                        : 'border border-[var(--border)]'
-                    }`}
-                  >
-                    <div
-                      className="h-28 rounded-xl border border-[var(--border)]"
-                      style={{ backgroundColor: form.colorPalette.background }}
-                    />
-                    <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
-                      Minimal Light
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => updateField('template', 'warm-card')}
-                    className={`rounded-2xl bg-white p-3 text-left shadow-sm ${
-                      form.template === 'warm-card'
-                        ? 'border-2 border-[var(--brand)]'
-                        : 'border border-[var(--border)]'
-                    }`}
-                  >
-                    <div
-                      className="h-28 rounded-xl"
-                      style={{
-                        background: `linear-gradient(180deg, ${form.colorPalette.background} 0%, ${form.colorPalette.accent} 100%)`,
-                      }}
-                    />
-                    <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
-                      Warm Card
-                    </p>
-                  </button>
-                </div>
-
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                  <input
-                    type="text"
-                    value={form.businessName}
-                    onChange={(e) => updateField('businessName', e.target.value)}
-                    placeholder="Business name"
-                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                    required
-                  />
-
-                  <input
-                    type="text"
-                    value={form.tagline}
-                    onChange={(e) => updateField('tagline', e.target.value)}
-                    placeholder="Tagline"
-                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                  />
-
-                  <input
-                    type="text"
-                    value={form.pageHeadline}
-                    onChange={(e) => updateField('pageHeadline', e.target.value)}
-                    placeholder="AI page headline"
-                    className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                  />
-
-                  <textarea
-                    value={form.pageDescription}
-                    onChange={(e) => updateField('pageDescription', e.target.value)}
-                    placeholder="AI page description"
-                    className="min-h-24 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                  />
-
-                  <div className="rounded-xl border border-[var(--border)] bg-white p-4">
-                    <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
-                      Page Colours
-                    </h3>
-
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="text-xs text-[var(--mocha)]">
-                        Background
-                        <input
-                          type="color"
-                          value={form.colorPalette.background}
-                          onChange={(e) => updateColorField('background', e.target.value)}
-                          className="mt-1 h-10 w-full"
-                        />
-                      </label>
-
-                      <label className="text-xs text-[var(--mocha)]">
-                        Accent
-                        <input
-                          type="color"
-                          value={form.colorPalette.accent}
-                          onChange={(e) => updateColorField('accent', e.target.value)}
-                          className="mt-1 h-10 w-full"
-                        />
-                      </label>
+                      <p className="text-xs text-[var(--mocha)]/60">
+                        {step.complete ? 'Completed' : 'Pending'}
+                      </p>
                     </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-                  <div className="rounded-xl border border-[var(--border)] bg-white p-4">
-                    <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
-                      Flyer Wording
-                    </h3>
+          <div className="grid gap-6 lg:grid-cols-[1.7fr_0.9fr]">
+            <section className="rounded-[28px] bg-[rgba(255,255,255,0.9)] p-5 shadow-2xl backdrop-blur-md sm:p-8">
+              <div className="mb-6 flex items-center gap-6 border-b border-[var(--border)] pb-3 text-sm font-semibold">
+                <button
+                  type="button"
+                  onClick={openCreateTab}
+                  className={`pb-2 ${
+                    activeTab === 'create'
+                      ? 'border-b-2 border-[var(--brand)] text-[var(--text)]'
+                      : 'text-[var(--mocha)]/60'
+                  }`}
+                >
+                  Create New
+                </button>
 
-                    <select
-                      value={form.flyerTemplate}
-                      onChange={(e) =>
-                        updateField('flyerTemplate', e.target.value as FlyerTemplate)
-                      }
-                      className="mb-4 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                <button
+                  type="button"
+                  onClick={openMyPagesTab}
+                  className={`pb-2 ${
+                    activeTab === 'pages'
+                      ? 'border-b-2 border-[var(--brand)] text-[var(--text)]'
+                      : 'text-[var(--mocha)]/60'
+                  }`}
+                >
+                  My Pages
+                </button>
+              </div>
+
+              {activeTab === 'create' ? (
+                <>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-[var(--text)] sm:text-2xl">
+                      {editingId ? 'Edit Page' : 'Create Page'}
+                    </h2>
+
+                    {editingId ? (
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+                      >
+                        Cancel Edit
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <div className="mb-8 grid gap-4 md:grid-cols-3">
+                    <button
+                      type="button"
+                      onClick={() => updateField('template', 'classic-dark')}
+                      className={`rounded-2xl bg-white p-3 text-left shadow-sm ${
+                        form.template === 'classic-dark'
+                          ? 'border-2 border-[var(--brand)]'
+                          : 'border border-[var(--border)]'
+                      }`}
                     >
-                      <option value="classic-nfc">Classic NFC</option>
-                      <option value="luxury-card">Luxury Card</option>
-                      <option value="bold-promo">Bold Promo</option>
-                    </select>
+                      <div
+                        className="h-28 rounded-xl"
+                        style={{
+                          background: `linear-gradient(180deg, ${form.colorPalette.accent} 0%, #201710 100%)`,
+                        }}
+                      />
+                      <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
+                        Classic Dark
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateField('template', 'minimal-light')}
+                      className={`rounded-2xl bg-white p-3 text-left shadow-sm ${
+                        form.template === 'minimal-light'
+                          ? 'border-2 border-[var(--brand)]'
+                          : 'border border-[var(--border)]'
+                      }`}
+                    >
+                      <div
+                        className="h-28 rounded-xl border border-[var(--border)]"
+                        style={{ backgroundColor: form.colorPalette.background }}
+                      />
+                      <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
+                        Minimal Light
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateField('template', 'warm-card')}
+                      className={`rounded-2xl bg-white p-3 text-left shadow-sm ${
+                        form.template === 'warm-card'
+                          ? 'border-2 border-[var(--brand)]'
+                          : 'border border-[var(--border)]'
+                      }`}
+                    >
+                      <div
+                        className="h-28 rounded-xl"
+                        style={{
+                          background: `linear-gradient(180deg, ${form.colorPalette.background} 0%, ${form.colorPalette.accent} 100%)`,
+                        }}
+                      />
+                      <p className="mt-3 text-center text-sm font-semibold text-[var(--text)]">
+                        Warm Card
+                      </p>
+                    </button>
+                  </div>
+
+                  <form className="space-y-4" onSubmit={handleSubmit}>
+                    <input
+                      type="text"
+                      value={form.businessName}
+                      onChange={(e) => updateField('businessName', e.target.value)}
+                      placeholder="Business name"
+                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      required
+                    />
 
                     <input
                       type="text"
-                      value={form.flyerHeadline}
-                      onChange={(e) => updateField('flyerHeadline', e.target.value)}
-                      placeholder="Flyer headline"
-                      className="mb-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      value={form.tagline}
+                      onChange={(e) => updateField('tagline', e.target.value)}
+                      placeholder="Tagline"
+                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                    />
+
+                    <input
+                      type="text"
+                      value={form.pageHeadline}
+                      onChange={(e) => updateField('pageHeadline', e.target.value)}
+                      placeholder="AI page headline"
+                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                     />
 
                     <textarea
-                      value={form.flyerSubtext}
-                      onChange={(e) => updateField('flyerSubtext', e.target.value)}
-                      placeholder="Flyer subtext"
-                      className="mb-3 min-h-20 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      value={form.pageDescription}
+                      onChange={(e) => updateField('pageDescription', e.target.value)}
+                      placeholder="AI page description"
+                      className="min-h-24 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                     />
 
-                    <input
-                      type="text"
-                      value={form.flyerCallout}
-                      onChange={(e) => updateField('flyerCallout', e.target.value)}
-                      placeholder="Flyer callout"
-                      className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                    />
-                  </div>
+                    <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+                      <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
+                        Page Colours
+                      </h3>
 
-                  <input
-                    type="text"
-                    value={slug}
-                    readOnly
-                    className="w-full rounded-xl border border-[var(--border)] bg-[#f5efe8] px-4 py-3 text-sm text-[var(--mocha)]"
-                  />
-
-                  <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3">
-                    <input
-                      id="publish-toggle"
-                      type="checkbox"
-                      checked={form.isPublished}
-                      onChange={(e) => updateField('isPublished', e.target.checked)}
-                      className="h-4 w-4"
-                    />
-
-                    <label
-                      htmlFor="publish-toggle"
-                      className="text-sm font-medium text-[var(--text)]"
-                    >
-                      Publish this page
-                    </label>
-                  </div>
-
-                  <div className="rounded-xl border border-[var(--border)] bg-white p-4">
-                    <label className="mb-2 block text-sm font-medium text-[var(--text)]">
-                      Upload Logo
-                    </label>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="w-full text-sm text-[var(--mocha)]"
-                    />
-
-                    {uploadingLogo ? (
-                      <p className="mt-2 text-xs text-[var(--mocha)]">Uploading...</p>
-                    ) : null}
-
-                    {form.logoUrl ? (
-                      <div className="mt-4 flex items-center gap-3">
-                        <div className="h-14 w-14 overflow-hidden rounded-full bg-white p-1 shadow-sm">
-                          <Image
-                            src={form.logoUrl}
-                            alt="Uploaded logo"
-                            width={56}
-                            height={56}
-                            className="h-full w-full rounded-full object-cover"
-                            unoptimized
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="text-xs text-[var(--mocha)]">
+                          Background
+                          <input
+                            type="color"
+                            value={form.colorPalette.background}
+                            onChange={(e) => updateColorField('background', e.target.value)}
+                            className="mt-1 h-10 w-full"
                           />
-                        </div>
+                        </label>
 
-                        <p className="text-xs text-green-700">Logo uploaded</p>
+                        <label className="text-xs text-[var(--mocha)]">
+                          Accent
+                          <input
+                            type="color"
+                            value={form.colorPalette.accent}
+                            onChange={(e) => updateColorField('accent', e.target.value)}
+                            className="mt-1 h-10 w-full"
+                          />
+                        </label>
                       </div>
-                    ) : null}
-                  </div>
+                    </div>
 
-                  <div className="pt-2">
-                    <h3 className="mb-3 text-lg font-semibold text-[var(--text)]">
-                      Social Links
-                    </h3>
+                    <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+                      <h3 className="mb-3 text-sm font-semibold text-[var(--text)]">
+                        Flyer Wording
+                      </h3>
 
-                    <div className="space-y-3">
+                      <select
+                        value={form.flyerTemplate}
+                        onChange={(e) =>
+                          updateField('flyerTemplate', e.target.value as FlyerTemplate)
+                        }
+                        className="mb-4 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      >
+                        <option value="classic-nfc">Classic NFC</option>
+                        <option value="luxury-card">Luxury Card</option>
+                        <option value="bold-promo">Bold Promo</option>
+                      </select>
+
                       <input
-                        value={form.whatsapp}
-                        onChange={(e) => updateField('whatsapp', e.target.value)}
-                        placeholder="WhatsApp URL"
-                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                        type="text"
+                        value={form.flyerHeadline}
+                        onChange={(e) => updateField('flyerHeadline', e.target.value)}
+                        placeholder="Flyer headline"
+                        className="mb-3 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                      />
+
+                      <textarea
+                        value={form.flyerSubtext}
+                        onChange={(e) => updateField('flyerSubtext', e.target.value)}
+                        placeholder="Flyer subtext"
+                        className="mb-3 min-h-20 w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                       />
 
                       <input
-                        value={form.instagram}
-                        onChange={(e) => updateField('instagram', e.target.value)}
-                        placeholder="Instagram URL"
-                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                      />
-
-                      <input
-                        value={form.googleReviews}
-                        onChange={(e) => updateField('googleReviews', e.target.value)}
-                        placeholder="Google Reviews URL"
-                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                      />
-
-                      <input
-                        value={form.facebook}
-                        onChange={(e) => updateField('facebook', e.target.value)}
-                        placeholder="Facebook URL"
-                        className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
-                      />
-
-                      <input
-                        value={form.website}
-                        onChange={(e) => updateField('website', e.target.value)}
-                        placeholder="Website URL"
+                        type="text"
+                        value={form.flyerCallout}
+                        onChange={(e) => updateField('flyerCallout', e.target.value)}
+                        placeholder="Flyer callout"
                         className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
                       />
                     </div>
+
+                    <input
+                      type="text"
+                      value={slug}
+                      readOnly
+                      className="w-full rounded-xl border border-[var(--border)] bg-[#f5efe8] px-4 py-3 text-sm text-[var(--mocha)]"
+                    />
+
+                    <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-white px-4 py-3">
+                      <input
+                        id="publish-toggle"
+                        type="checkbox"
+                        checked={form.isPublished}
+                        onChange={(e) => updateField('isPublished', e.target.checked)}
+                        className="h-4 w-4"
+                      />
+
+                      <label
+                        htmlFor="publish-toggle"
+                        className="text-sm font-medium text-[var(--text)]"
+                      >
+                        Publish this page
+                      </label>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+                      <label className="mb-2 block text-sm font-medium text-[var(--text)]">
+                        Upload Logo
+                      </label>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        className="w-full text-sm text-[var(--mocha)]"
+                      />
+
+                      {uploadingLogo ? (
+                        <p className="mt-2 text-xs text-[var(--mocha)]">Uploading...</p>
+                      ) : null}
+
+                      {form.logoUrl ? (
+                        <div className="mt-4 flex items-center gap-3">
+                          <div className="h-14 w-14 overflow-hidden rounded-full bg-white p-1 shadow-sm">
+                            <Image
+                              src={form.logoUrl}
+                              alt="Uploaded logo"
+                              width={56}
+                              height={56}
+                              className="h-full w-full rounded-full object-cover"
+                              unoptimized
+                            />
+                          </div>
+
+                          <p className="text-xs text-green-700">Logo uploaded</p>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="pt-2">
+                      <h3 className="mb-3 text-lg font-semibold text-[var(--text)]">
+                        Social Links
+                      </h3>
+
+                      <div className="space-y-3">
+                        <input
+                          value={form.whatsapp}
+                          onChange={(e) => updateField('whatsapp', e.target.value)}
+                          placeholder="WhatsApp URL"
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                        />
+
+                        <input
+                          value={form.instagram}
+                          onChange={(e) => updateField('instagram', e.target.value)}
+                          placeholder="Instagram URL"
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                        />
+
+                        <input
+                          value={form.googleReviews}
+                          onChange={(e) => updateField('googleReviews', e.target.value)}
+                          placeholder="Google Reviews URL"
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                        />
+
+                        <input
+                          value={form.facebook}
+                          onChange={(e) => updateField('facebook', e.target.value)}
+                          placeholder="Facebook URL"
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                        />
+
+                        <input
+                          value={form.website}
+                          onChange={(e) => updateField('website', e.target.value)}
+                          placeholder="Website URL"
+                          className="w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {message ? (
+                      <p className="text-sm font-medium text-green-700">{message}</p>
+                    ) : null}
+
+                    {error ? (
+                      <p className="text-sm font-medium text-red-700">{error}</p>
+                    ) : null}
+
+                    <button
+                      type="submit"
+                      disabled={loading || uploadingLogo}
+                      className="mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
+                      style={{
+                        background: `linear-gradient(135deg, ${form.colorPalette.accent} 0%, #2b211b 100%)`,
+                      }}
+                    >
+                      {loading
+                        ? editingId
+                          ? 'Updating...'
+                          : 'Creating...'
+                        : editingId
+                          ? 'Update Page'
+                          : '+ Create Page'}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-[var(--text)]">
+                      Saved Pages
+                    </h2>
+
+                    <button
+                      type="button"
+                      onClick={fetchBusinesses}
+                      className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+                    >
+                      Refresh
+                    </button>
                   </div>
 
                   {message ? (
-                    <p className="text-sm font-medium text-green-700">{message}</p>
+                    <p className="mb-4 text-sm font-medium text-green-700">
+                      {message}
+                    </p>
                   ) : null}
 
                   {error ? (
-                    <p className="text-sm font-medium text-red-700">{error}</p>
+                    <p className="mb-4 text-sm font-medium text-red-700">
+                      {error}
+                    </p>
                   ) : null}
 
-                  <button
-                    type="submit"
-                    disabled={loading || uploadingLogo}
-                    className="mt-4 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
-                    style={{
-                      background: `linear-gradient(135deg, ${form.colorPalette.accent} 0%, #2b211b 100%)`,
-                    }}
-                  >
-                    {loading
-                      ? editingId
-                        ? 'Updating...'
-                        : 'Creating...'
-                      : editingId
-                        ? 'Update Page'
-                        : '+ Create Page'}
-                  </button>
-                </form>
-              </>
-            ) : (
-              <div>
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-[var(--text)]">
-                    Saved Pages
-                  </h2>
+                  {loadingPages ? (
+                    <p className="text-sm text-[var(--mocha)]/70">Loading pages...</p>
+                  ) : savedBusinesses.length === 0 ? (
+                    <div className="rounded-2xl border border-[var(--border)] bg-white p-5 text-sm text-[var(--mocha)]/70">
+                      <div className="space-y-3">
+                        <p className="font-semibold text-[var(--text)]">
+                          No pages created yet.
+                        </p>
 
-                  <button
-                    type="button"
-                    onClick={fetchBusinesses}
-                    className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
-                  >
-                    Refresh
-                  </button>
-                </div>
+                        <p>
+                          Start by creating your first NFC business page, uploading your
+                          logo, adding social links, and publishing your page.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {savedBusinesses.map((business) => {
+                        const publicUrl = `${SITE_URL}/preview/${business.slug}`
 
-                {message ? (
-                  <p className="mb-4 text-sm font-medium text-green-700">
-                    {message}
-                  </p>
-                ) : null}
+                        return (
+                          <div
+                            key={business.id}
+                            className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm"
+                          >
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-lg font-semibold text-[var(--text)]">
+                                    {business.name}
+                                  </h3>
 
-                {error ? (
-                  <p className="mb-4 text-sm font-medium text-red-700">
-                    {error}
-                  </p>
-                ) : null}
+                                  <span
+                                    className={`rounded-full px-2 py-1 text-xs font-medium ${
+                                      business.isPublished
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-gray-100 text-gray-600'
+                                    }`}
+                                  >
+                                    {business.isPublished ? 'Published' : 'Draft'}
+                                  </span>
+                                </div>
 
-                {loadingPages ? (
-                  <p className="text-sm text-[var(--mocha)]/70">Loading pages...</p>
-                ) : savedBusinesses.length === 0 ? (
-                  <div className="rounded-2xl border border-[var(--border)] bg-white p-5 text-sm text-[var(--mocha)]/70">
-                    No pages created yet.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {savedBusinesses.map((business) => {
-                      const publicUrl = `${SITE_URL}/preview/${business.slug}`
+                                <p className="mt-1 text-sm text-[var(--mocha)]/70">
+                                  {business.tagline || 'No tagline'}
+                                </p>
 
-                      return (
-                        <div
-                          key={business.id}
-                          className="rounded-2xl border border-[var(--border)] bg-white p-4 shadow-sm"
-                        >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-lg font-semibold text-[var(--text)]">
-                                  {business.name}
-                                </h3>
+                                <p className="mt-2 text-xs text-[var(--mocha)]/60">
+                                  /preview/{business.slug}
+                                </p>
 
-                                <span
-                                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                    business.isPublished
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-gray-100 text-gray-600'
-                                  }`}
-                                >
-                                  {business.isPublished ? 'Published' : 'Draft'}
-                                </span>
+                                <p className="mt-2 text-xs text-[var(--mocha)]/70">
+                                  👁 {business.views} views • 🔗 {business.clicks} clicks
+                                </p>
                               </div>
 
-                              <p className="mt-1 text-sm text-[var(--mocha)]/70">
-                                {business.tagline || 'No tagline'}
-                              </p>
+                              <div className="flex flex-wrap gap-2 sm:justify-end">
+                                <Link
+                                  href={`/preview/${business.slug}`}
+                                  target="_blank"
+                                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                                >
+                                  Preview
+                                </Link>
 
-                              <p className="mt-2 text-xs text-[var(--mocha)]/60">
-                                /preview/{business.slug}
-                              </p>
-
-                              <p className="mt-2 text-xs text-[var(--mocha)]/70">
-                                👁 {business.views} views • 🔗 {business.clicks} clicks
-                              </p>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                              <Link
-                                href={`/preview/${business.slug}`}
-                                target="_blank"
-                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
-                              >
-                                Preview
-                              </Link>
-
-                              <Link
-                                href={`/flyer/${business.slug}`}
-                                target="_blank"
-                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
-                              >
-                                Flyer
-                              </Link>
-
-                              <button
-                                type="button"
-                                onClick={() => copyPublicLink(business.slug)}
-                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[#f8f4ef]"
-                              >
-                                Copy Link
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => toggleQr(business.id)}
-                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
-                              >
-                                {openQrId === business.id ? 'Hide QR' : 'Show QR'}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => togglePublish(business)}
-                                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
-                              >
-                                {business.isPublished ? 'Unpublish' : 'Publish'}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(business.id)}
-                                disabled={loadingEdit}
-                                className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-                              >
-                                {loadingEdit ? 'Loading...' : 'Edit'}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(business.id)}
-                                disabled={deletingId === business.id}
-                                className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
-                              >
-                                {deletingId === business.id ? 'Deleting...' : 'Delete'}
-                              </button>
-                            </div>
-                          </div>
-
-                          {openQrId === business.id ? (
-                            <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[#faf6f1] p-4">
-                              <div className="flex flex-col items-center gap-3 text-center">
-                                <QRCodeCanvas
-                                  id={`qr-${business.slug}`}
-                                  value={publicUrl}
-                                  size={180}
-                                  bgColor="#ffffff"
-                                  fgColor="#000000"
-                                  level="H"
-                                />
-
-                                <p className="text-sm text-[var(--mocha)]/70">
-                                  Scan this QR code to open the page
-                                </p>
-
-                                <p className="break-all text-xs text-[var(--mocha)]/60">
-                                  {publicUrl}
-                                </p>
+                                <Link
+                                  href={`/flyer/${business.slug}`}
+                                  target="_blank"
+                                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                                >
+                                  Flyer
+                                </Link>
 
                                 <button
                                   type="button"
-                                  onClick={() => downloadQRCode(business.slug)}
-                                  className="mt-2 rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-white"
+                                  onClick={() => copyPublicLink(business.slug)}
+                                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:bg-[#f8f4ef]"
                                 >
-                                  Download QR
+                                  Copy Link
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => toggleQr(business.id)}
+                                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                                >
+                                  {openQrId === business.id ? 'Hide QR' : 'Show QR'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => togglePublish(business)}
+                                  className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)]"
+                                >
+                                  {business.isPublished ? 'Unpublish' : 'Publish'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleEdit(business.id)}
+                                  disabled={loadingEdit}
+                                  className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+                                >
+                                  {loadingEdit ? 'Loading...' : 'Edit'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(business.id)}
+                                  disabled={deletingId === business.id}
+                                  className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+                                >
+                                  {deletingId === business.id ? 'Deleting...' : 'Delete'}
                                 </button>
                               </div>
                             </div>
-                          ) : null}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+
+                            {openQrId === business.id ? (
+                              <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[#faf6f1] p-4">
+                                <div className="flex flex-col items-center gap-3 text-center">
+                                  <QRCodeCanvas
+                                    id={`qr-${business.slug}`}
+                                    value={publicUrl}
+                                    size={180}
+                                    bgColor="#ffffff"
+                                    fgColor="#000000"
+                                    level="H"
+                                  />
+
+                                  <p className="text-sm text-[var(--mocha)]/70">
+                                    Scan this QR code to open the page
+                                  </p>
+
+                                  <p className="break-all text-xs text-[var(--mocha)]/60">
+                                    {publicUrl}
+                                  </p>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadQRCode(business.slug)}
+                                    className="mt-2 rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-white"
+                                  >
+                                    Download QR
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            <aside className="h-fit rounded-[28px] bg-[rgba(255,255,255,0.9)] p-5 shadow-2xl backdrop-blur-md">
+              <h2 className="mb-4 text-xl font-semibold text-[var(--text)]">
+                Preview
+              </h2>
+
+              <div className="mx-auto w-full max-w-[320px] rounded-[24px] bg-white p-4 shadow-inner sm:max-w-[280px]">
+                {renderPreviewCard()}
               </div>
-            )}
-          </section>
-
-          <aside className="h-fit rounded-[28px] bg-[rgba(255,255,255,0.9)] p-5 shadow-2xl backdrop-blur-md">
-            <h2 className="mb-4 text-xl font-semibold text-[var(--text)]">
-              Preview
-            </h2>
-
-            <div className="mx-auto w-full max-w-[280px] rounded-[24px] bg-white p-4 shadow-inner">
-              {renderPreviewCard()}
-            </div>
-          </aside>
+            </aside>
+          </div>
         </div>
       </div>
     </main>
