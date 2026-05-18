@@ -2,12 +2,7 @@
 
 import Image from 'next/image'
 import { use, useEffect, useState } from 'react'
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-} from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 type Props = {
@@ -81,7 +76,7 @@ export default function PublicLandingPage({ params }: Props) {
             defaultColorPalette.accent,
         }
 
-        setBusiness({
+        const loadedBusiness: Business = {
           id: docSnap.id,
           name: data.name || '',
           tagline: data.tagline || '',
@@ -93,7 +88,23 @@ export default function PublicLandingPage({ params }: Props) {
           logoUrl: data.logoUrl || '',
           isPublished: Boolean(data.isPublished),
           links: data.links || [],
-        })
+        }
+
+        setBusiness(loadedBusiness)
+
+        if (loadedBusiness.isPublished) {
+          fetch('/api/analytics/view', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              businessId: loadedBusiness.id,
+            }),
+          }).catch((error) => {
+            console.error('View tracking failed:', error)
+          })
+        }
       } catch (error) {
         console.error('Preview page error:', error)
         setBusiness(null)
@@ -104,6 +115,20 @@ export default function PublicLandingPage({ params }: Props) {
 
     loadBusiness()
   }, [slug])
+
+  function trackClick(businessId: string) {
+    fetch('/api/analytics/click', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        businessId,
+      }),
+    }).catch((error) => {
+      console.error('Click tracking failed:', error)
+    })
+  }
 
   if (loading) {
     return (
@@ -185,6 +210,7 @@ export default function PublicLandingPage({ params }: Props) {
         href={link.url}
         target="_blank"
         rel="noreferrer"
+        onClick={() => trackClick(safeBusiness.id)}
         className={linkClassName}
       >
         {link.label}
