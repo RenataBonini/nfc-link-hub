@@ -4,11 +4,8 @@ import Image from 'next/image'
 import { use, useEffect, useState } from 'react'
 import {
   collection,
-  doc,
   getDocs,
-  increment,
   query,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -58,7 +55,11 @@ export default function PublicLandingPage({ params }: Props) {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const q = query(collection(db, 'businesses'), where('slug', '==', slug))
+        const q = query(
+          collection(db, 'businesses'),
+          where('slug', '==', slug)
+        )
+
         const snapshot = await getDocs(q)
 
         if (snapshot.empty) {
@@ -80,7 +81,7 @@ export default function PublicLandingPage({ params }: Props) {
             defaultColorPalette.accent,
         }
 
-        const loadedBusiness: Business = {
+        setBusiness({
           id: docSnap.id,
           name: data.name || '',
           tagline: data.tagline || '',
@@ -92,17 +93,9 @@ export default function PublicLandingPage({ params }: Props) {
           logoUrl: data.logoUrl || '',
           isPublished: Boolean(data.isPublished),
           links: data.links || [],
-        }
-
-        setBusiness(loadedBusiness)
-
-        if (loadedBusiness.isPublished) {
-          await updateDoc(doc(db, 'businesses', docSnap.id), {
-            views: increment(1),
-          })
-        }
+        })
       } catch (error) {
-        console.error(error)
+        console.error('Preview page error:', error)
         setBusiness(null)
       } finally {
         setLoading(false)
@@ -112,20 +105,10 @@ export default function PublicLandingPage({ params }: Props) {
     loadBusiness()
   }, [slug])
 
-  async function trackClick(businessId: string) {
-    try {
-      await updateDoc(doc(db, 'businesses', businessId), {
-        clicks: increment(1),
-      })
-    } catch (error) {
-      console.error('Click tracking failed:', error)
-    }
-  }
-
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-lg text-[var(--text)]">Loading page...</p>
+        <p className="text-lg text-black">Loading page...</p>
       </main>
     )
   }
@@ -133,7 +116,7 @@ export default function PublicLandingPage({ params }: Props) {
   if (!business) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-lg text-[var(--text)]">Business page not found.</p>
+        <p className="text-2xl font-bold text-black">Business page not found.</p>
       </main>
     )
   }
@@ -141,15 +124,12 @@ export default function PublicLandingPage({ params }: Props) {
   if (!business.isPublished) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-lg text-[var(--text)]">
-          This page is not published yet.
-        </p>
+        <p className="text-lg text-black">This page is not published yet.</p>
       </main>
     )
   }
 
   const safeBusiness = business
-  const hasLogo = Boolean(safeBusiness.logoUrl)
   const headline = safeBusiness.pageHeadline || safeBusiness.name
   const description =
     safeBusiness.pageDescription ||
@@ -157,36 +137,42 @@ export default function PublicLandingPage({ params }: Props) {
     'Connect with us instantly'
 
   function renderLogo(shape: 'circle' | 'square' = 'circle') {
-  if (!safeBusiness.logoUrl) return null
+    if (!safeBusiness.logoUrl) {
+      return (
+        <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-white text-4xl font-bold text-[#8f6d4e]">
+          {safeBusiness.name.charAt(0).toUpperCase()}
+        </div>
+      )
+    }
 
-  if (shape === 'square') {
+    if (shape === 'square') {
+      return (
+        <div className="mx-auto mb-4 flex h-32 w-52 items-center justify-center rounded-[28px] bg-white p-4 shadow-xl">
+          <Image
+            src={safeBusiness.logoUrl}
+            alt={`${safeBusiness.name} logo`}
+            width={180}
+            height={120}
+            className="h-full w-full object-contain"
+            unoptimized
+          />
+        </div>
+      )
+    }
+
     return (
-      <div className="mx-auto mb-4 flex h-32 w-52 items-center justify-center rounded-[28px] bg-white p-4 shadow-xl">
+      <div className="mx-auto mb-4 flex h-28 w-44 items-center justify-center rounded-3xl bg-white p-3 shadow-md">
         <Image
           src={safeBusiness.logoUrl}
           alt={`${safeBusiness.name} logo`}
-          width={180}
-          height={120}
+          width={160}
+          height={100}
           className="h-full w-full object-contain"
           unoptimized
         />
       </div>
     )
   }
-
-  return (
-    <div className="mx-auto mb-4 flex h-28 w-44 items-center justify-center rounded-3xl bg-white p-3 shadow-md">
-      <Image
-        src={safeBusiness.logoUrl}
-        alt={`${safeBusiness.name} logo`}
-        width={160}
-        height={100}
-        className="h-full w-full object-contain"
-        unoptimized
-      />
-    </div>
-  )
-}
 
   function renderLinks(linkClassName: string) {
     if (safeBusiness.links.length === 0) {
@@ -199,7 +185,6 @@ export default function PublicLandingPage({ params }: Props) {
         href={link.url}
         target="_blank"
         rel="noreferrer"
-        onClick={() => trackClick(safeBusiness.id)}
         className={linkClassName}
       >
         {link.label}
@@ -211,24 +196,18 @@ export default function PublicLandingPage({ params }: Props) {
     if (safeBusiness.template === 'minimal-light') {
       return (
         <div
-          className="rounded-[24px] border border-[var(--border)] px-6 py-8 text-center text-[var(--text)] shadow-2xl"
+          className="rounded-[24px] px-6 py-8 text-center shadow-2xl"
           style={{ backgroundColor: safeBusiness.colorPalette.background }}
         >
-          {hasLogo ? (
-            renderLogo('circle')
-          ) : (
-            <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-[var(--border)]" />
-          )}
+          {renderLogo('circle')}
 
-          <h1 className="text-2xl font-bold">{headline}</h1>
+          <h1 className="text-2xl font-bold text-[#2b211b]">{headline}</h1>
 
-          <p className="mt-2 text-sm text-[var(--mocha)]/70">
-            {description}
-          </p>
+          <p className="mt-2 text-sm text-[#8f6d4e]">{description}</p>
 
           <div className="mt-8 space-y-3">
             {renderLinks(
-              'block rounded-full border border-[var(--border)] bg-white px-4 py-3 text-sm font-medium text-[var(--text)]'
+              'block rounded-full border border-[#d8c7b8] bg-white px-4 py-3 text-sm font-medium text-[#2b211b]'
             )}
           </div>
         </div>
@@ -238,26 +217,20 @@ export default function PublicLandingPage({ params }: Props) {
     if (safeBusiness.template === 'warm-card') {
       return (
         <div
-          className="rounded-[28px] px-6 py-8 text-center text-[var(--text)] shadow-2xl"
+          className="rounded-[28px] px-6 py-8 text-center shadow-2xl"
           style={{
             background: `linear-gradient(180deg, ${safeBusiness.colorPalette.background} 0%, ${safeBusiness.colorPalette.accent} 100%)`,
           }}
         >
-          {hasLogo ? (
-            renderLogo('square')
-          ) : (
-            <div className="mx-auto mb-4 h-20 w-20 rounded-2xl bg-white/50" />
-          )}
+          {renderLogo('square')}
 
-          <h1 className="text-2xl font-bold">{headline}</h1>
+          <h1 className="text-2xl font-bold text-[#2b211b]">{headline}</h1>
 
-          <p className="mt-2 text-sm text-[var(--mocha)]/80">
-            {description}
-          </p>
+          <p className="mt-2 text-sm text-[#5b4636]">{description}</p>
 
           <div className="mt-8 space-y-3">
             {renderLinks(
-              'block rounded-2xl bg-white/80 px-4 py-3 text-sm font-medium text-[var(--text)] shadow-sm'
+              'block rounded-2xl bg-white/80 px-4 py-3 text-sm font-medium text-[#2b211b] shadow-sm'
             )}
           </div>
         </div>
@@ -271,17 +244,11 @@ export default function PublicLandingPage({ params }: Props) {
           background: `linear-gradient(180deg, ${safeBusiness.colorPalette.accent} 0%, #1f1813 100%)`,
         }}
       >
-        {hasLogo ? (
-          renderLogo('circle')
-        ) : (
-          <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-white/10" />
-        )}
+        {renderLogo('circle')}
 
         <h1 className="text-2xl font-bold">{headline}</h1>
 
-        <p className="mt-2 text-sm text-white/70">
-          {description}
-        </p>
+        <p className="mt-2 text-sm text-white/70">{description}</p>
 
         <div className="mt-8 space-y-3">
           {renderLinks(
@@ -294,7 +261,7 @@ export default function PublicLandingPage({ params }: Props) {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(135deg,#b8926b_0%,#8f6d4e_100%)] px-6 py-10">
-      <div className="w-full max-w-sm rounded-[28px] bg-[rgba(255,255,255,0.12)] p-5 backdrop-blur-xl">
+      <div className="w-full max-w-sm rounded-[28px] bg-white/10 p-5 backdrop-blur-xl">
         {renderCard()}
       </div>
     </main>

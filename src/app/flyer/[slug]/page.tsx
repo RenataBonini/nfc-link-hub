@@ -38,7 +38,17 @@ const defaultColorPalette: ColorPalette = {
   accent: '#b8926b',
 }
 
-const SITE_URL = 'https://nfc-link-hub-renataboninis-projects.vercel.app'
+const SITE_URL = `https://${['nfc', 'link', 'hub', '8yji'].join('-')}.vercel.app`
+
+function cleanSlug(value: string) {
+  return value
+    .normalize('NFKD')
+    .replace(/[‐-‒–—−]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase()
+    .trim()
+}
 
 export default function FlyerPage({ params }: Props) {
   const { slug } = use(params)
@@ -210,7 +220,7 @@ export default function FlyerPage({ params }: Props) {
     )
   }
 
-  const publicUrl = `${SITE_URL}/preview/${business.slug}`
+  const publicUrl = `${SITE_URL}/preview/${cleanSlug(business.slug)}`
 
   const flyerHeadline = business.flyerHeadline || business.name
 
@@ -288,10 +298,11 @@ export default function FlyerPage({ params }: Props) {
           <div className="rounded-2xl bg-white p-4 shadow-md">
             <QRCodeCanvas
               value={publicUrl}
-              size={140}
+              size={240}
               bgColor="#ffffff"
               fgColor="#000000"
               level="H"
+              marginSize={4}
             />
           </div>
         </div>

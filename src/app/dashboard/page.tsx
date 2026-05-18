@@ -75,7 +75,17 @@ type Business = {
   clicks: number
 }
 
-const SITE_URL = 'https://nfc-link-hub-renataboninis-projects.vercel.app'
+const SITE_URL = `https://${['nfc', 'link', 'hub', '8yji'].join('-')}.vercel.app`
+
+function cleanSlug(value: string) {
+  return value
+    .normalize('NFKD')
+    .replace(/[‐-‒–—−]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .toLowerCase()
+    .trim()
+}
 
 const defaultColorPalette: ColorPalette = {
   background: '#f5efe8',
@@ -539,27 +549,35 @@ export default function DashboardPage() {
     }
   }
 
-  function downloadQRCode(slugValue: string) {
-    const canvas = document.getElementById(`qr-${slugValue}`) as HTMLCanvasElement | null
+  function downloadQRCode(businessId: string, slugValue: string) {
+  const wrapper = document.getElementById(`qr-wrapper-${businessId}`)
 
-    if (!canvas) {
-      setError('QR code not found.')
-      return
-    }
-
-    const pngUrl = canvas.toDataURL('image/png')
-
-    const link = document.createElement('a')
-    link.href = pngUrl
-    link.download = `${slugValue}-qr.png`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    setMessage('QR code downloaded successfully.')
-    setError('')
-    setTimeout(() => setMessage(''), 2500)
+  if (!wrapper) {
+    setError('QR code not found. Click Show QR first.')
+    return
   }
+
+  const canvas = wrapper.querySelector('canvas')
+
+  if (!canvas) {
+    setError('QR code not found. Click Show QR first.')
+    return
+  }
+
+  const pngUrl = canvas.toDataURL('image/png')
+
+  const link = document.createElement('a')
+  link.href = pngUrl
+  link.download = `${slugValue}-qr.png`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  setMessage('QR code downloaded successfully.')
+  setError('')
+
+  setTimeout(() => setMessage(''), 2500)
+}
 
   async function togglePublish(business: Business) {
     try {
@@ -1206,7 +1224,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="space-y-4">
                       {savedBusinesses.map((business) => {
-                        const publicUrl = `${SITE_URL}/preview/${business.slug}`
+                        const publicUrl = `${SITE_URL}/preview/${cleanSlug(business.slug)}`
 
                         return (
                           <div
@@ -1308,14 +1326,16 @@ export default function DashboardPage() {
                             {openQrId === business.id ? (
                               <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[#faf6f1] p-4">
                                 <div className="flex flex-col items-center gap-3 text-center">
+                                  <div id={`qr-wrapper-${business.id}`} className="rounded-2xl bg-white p-4">
                                   <QRCodeCanvas
-                                    id={`qr-${business.slug}`}
                                     value={publicUrl}
-                                    size={180}
+                                    size={240}
                                     bgColor="#ffffff"
                                     fgColor="#000000"
                                     level="H"
+                                    includeMargin
                                   />
+                                </div>
 
                                   <p className="text-sm text-[var(--mocha)]/70">
                                     Scan this QR code to open the page
@@ -1327,7 +1347,7 @@ export default function DashboardPage() {
 
                                   <button
                                     type="button"
-                                    onClick={() => downloadQRCode(business.slug)}
+                                    onClick={() => downloadQRCode(business.id, business.slug)}
                                     className="mt-2 rounded-lg bg-[var(--text)] px-4 py-2 text-sm font-medium text-white"
                                   >
                                     Download QR
