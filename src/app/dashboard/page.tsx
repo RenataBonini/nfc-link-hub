@@ -75,7 +75,7 @@ type Business = {
   clicks: number
 }
 
-const SITE_URL = 'https://nfc-link-hub-8yji.vercel.app'
+const SITE_URL = 'https://nfc-link-hub-renataboninis-projects.vercel.app'
 
 const defaultColorPalette: ColorPalette = {
   background: '#f5efe8',

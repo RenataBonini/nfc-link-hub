@@ -38,7 +38,7 @@ const defaultColorPalette: ColorPalette = {
   accent: '#b8926b',
 }
 
-const SITE_URL = 'https://nfc-link-hub-8yji.vercel.app'
+const SITE_URL = 'https://nfc-link-hub-renataboninis-projects.vercel.app'
 
 export default function FlyerPage({ params }: Props) {
   const { slug } = use(params)
