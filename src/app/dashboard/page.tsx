@@ -773,6 +773,13 @@ export default function DashboardPage() {
               AI Builder
             </Link>
 
+            <Link
+              href="/how-to-write-nfc"
+              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[var(--text)]"
+            >
+              How to Write NFC
+            </Link>
+
             <button
               type="button"
               onClick={handleLogout}
