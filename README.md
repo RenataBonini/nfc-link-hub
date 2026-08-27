@@ -54,7 +54,20 @@ A deployed version of the application is available through the repository's webs
 
 ## Screenshots
 
-Screenshots of the application will be added here.
+### NFC-enabled authentication experience
+The platform connects physical NFC interactions with digital business landing pages.
+
+![NFC Link Hub sign in](docs/screenshots/login.png)
+
+### Landing Page Builder
+Business owners can create branded landing pages, choose a design template and preview the customer experience before publishing.
+
+![NFC Link Hub Builder](docs/screenshots/builder.png)
+
+### Page Management & QR Sharing
+Published pages can be managed from the dashboard, with QR-code sharing and basic engagement analytics for views and link clicks.
+
+![Published page management](docs/screenshots/published-page.png)
 
 ## Running Locally
 
