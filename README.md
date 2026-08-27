@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NFC Link Hub
 
-## Getting Started
+A web-based digital platform designed to help small businesses create and manage a simple online presence that customers can access through an NFC tag.
 
-First, run the development server:
+This project was developed as my final-year dissertation for my BSc (Hons) Computing degree at Solent University and achieved a mark of 79%.
 
-```bash
+## About the Project
+
+I developed NFC Link Hub after researching some of the challenges small businesses face when establishing their online presence, particularly when they have limited budgets or technical experience.
+
+The platform allows a business owner to create a personalised landing page containing their business information and social media links. The page can then be associated with an NFC tag, allowing customers to access it by tapping the tag with a compatible device.
+
+Business owners can log in and manage their page without needing to edit code.
+
+## Features
+
+- User registration and authentication
+- Create a personalised business landing page
+- Add business information and social media links
+- Update existing page information
+- Delete a business page
+- Public customer-facing landing pages
+- NFC-compatible page access
+- Responsive web interface
+
+## Technologies
+
+- Next.js
+- TypeScript
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Admin SDK
+- Vercel
+- Git & GitHub
+
+## How It Works
+
+1. A business owner creates an account.
+2. The owner creates and customises their business landing page.
+3. The page is connected to an NFC tag through its URL.
+4. A customer taps the NFC tag with a compatible phone.
+5. The customer's browser opens the business landing page.
+6. The business owner can return to the platform to update or delete their information.
+
+## Project Background
+
+NFC Link Hub was developed between February and June 2026 as my final-year BSc (Hons) Computing dissertation project.
+
+One of the main challenges during development was working with technologies I had limited previous experience with, particularly the application framework and Firebase services. Building the project helped me develop my ability to research technical problems, learn independently and apply unfamiliar technologies to a working application.
+
+## Live Application
+
+A deployed version of the application is available through the repository's website link.
+
+## Screenshots
+
+Screenshots of the application will be added here.
+
+## Running Locally
+
+Clone the repository:
+
+git clone https://github.com/RenataBonini/nfc-link-hub.git
+
+Install dependencies:
+
+npm install
+
+Start the development server:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The application requires Firebase configuration to run locally. Environment-specific configuration should be stored locally and should not be committed to the repository.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Author
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Renata Bonini de Sousa
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Final Year Computing Project
+Southampton Solent University
